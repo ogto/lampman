@@ -68,7 +68,14 @@ export default async function Home() {
       { "@type": "City", name: "청주시" },
     ],
     knowsAbout: ["전기수리", "전기공사", "누전수리", "차단기", "분전반", "배선공사"],
-    ...(siteConfig.phone ? { telephone: siteConfig.phone } : {}),
+    telephone: siteConfig.phoneE164,
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: siteConfig.phoneE164,
+      contactType: "emergency service",
+      availableLanguage: "Korean",
+      areaServed: ["대전광역시", "청주시"],
+    },
     ...(siteConfig.email ? { email: siteConfig.email } : {}),
     ...(siteConfig.address
       ? { address: { "@type": "PostalAddress", streetAddress: siteConfig.address, addressCountry: "KR" } }
@@ -87,7 +94,7 @@ export default async function Home() {
             <div className="section-heading heading-split">
               <div>
                 <p className="eyebrow"><span /> WHAT WE FIX</p>
-                <h2>전기 문제는<br /><em>원인부터 다릅니다.</em></h2>
+                <h2>전기 문제는 <em>원인부터 다릅니다.</em></h2>
               </div>
               <p>
                 보이는 증상만 바꾸는 대신, 어느 회로에서 왜 문제가 생겼는지
@@ -126,7 +133,7 @@ export default async function Home() {
             </div>
             <div className="proof-copy">
               <p className="eyebrow"><span /> OUR STANDARD</p>
-              <h2>빠른 출동보다 중요한 건<br /><em>안전한 판단입니다.</em></h2>
+              <h2>빠른 출동보다 중요한 건 <em>안전한 판단입니다.</em></h2>
               <p className="large-copy">
                 긴급한 순간일수록 무엇을 왜 수리하는지 알 수 있어야 합니다.
                 램프맨은 증상 확인부터 재측정까지 이해하기 쉬운 흐름을 지향합니다.
@@ -145,7 +152,7 @@ export default async function Home() {
             <div className="section-heading heading-inline">
               <div>
                 <p className="eyebrow"><span /> SERVICE AREA</p>
-                <h2>두 도시만,<br /><em>더 깊고 빠르게.</em></h2>
+                <h2>두 도시만, <em>더 깊고 빠르게.</em></h2>
               </div>
               <p>전국을 넓게 말하지 않습니다. 실제로 움직일 수 있는 대전과 청주 생활권에 집중합니다.</p>
             </div>
@@ -168,7 +175,7 @@ export default async function Home() {
           <div className="shell work-grid">
             <div className="work-copy">
               <p className="eyebrow"><span /> SPACE & LIGHTING</p>
-              <h2>고치는 기술에서,<br /><em>공간을 켜는 감각까지.</em></h2>
+              <h2>고치는 기술에서, <em>공간을 켜는 감각까지.</em></h2>
               <p>
                 상가와 주택의 조명은 밝기만의 문제가 아닙니다. 기존 회로와
                 사용 목적, 눈부심과 유지관리까지 함께 살펴야 오래 편안합니다.
@@ -185,7 +192,7 @@ export default async function Home() {
         <section className="process-section section-pad" id="process">
           <div className="shell">
             <div className="section-heading heading-inline">
-              <div><p className="eyebrow"><span /> HOW IT WORKS</p><h2>전화 한 통부터<br /><em>복구 확인까지.</em></h2></div>
+              <div><p className="eyebrow"><span /> HOW IT WORKS</p><h2>전화 한 통부터 <em>복구 확인까지.</em></h2></div>
               <p>급할수록 흐름은 단순하고 투명해야 합니다.</p>
             </div>
             <ol className="process-line">
@@ -204,7 +211,7 @@ export default async function Home() {
         <section className="journal-section section-pad">
           <div className="shell">
             <div className="section-heading heading-inline">
-              <div><p className="eyebrow"><span /> FIELD NOTES</p><h2>전기안전<br /><em>노트.</em></h2></div>
+              <div><p className="eyebrow"><span /> FIELD NOTES</p><h2>전기안전 <em>노트.</em></h2></div>
               <Link className="text-link" href="/blog">모든 글 보기 <span>↗</span></Link>
             </div>
             <div className="journal-grid">
@@ -215,7 +222,11 @@ export default async function Home() {
 
         <section className="faq-section section-pad">
           <div className="shell faq-grid">
-            <div className="faq-heading"><p className="eyebrow"><span /> FAQ</p><h2>급할 때 가장<br /><em>많이 묻는 것.</em></h2></div>
+            <div className="faq-heading">
+              <p className="eyebrow"><span /> FAQ</p>
+              <h2>급할 때 가장 <em>많이 묻는 것.</em></h2>
+              <a className="faq-call" href={siteConfig.phoneHref}>바로 전화 {siteConfig.phoneDisplay} ↗</a>
+            </div>
             <div className="faq-list">
               {faqs.map(([question, answer], index) => (
                 <details key={question} open={index === 0}>

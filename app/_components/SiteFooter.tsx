@@ -23,7 +23,7 @@ export function SiteFooter() {
           <strong>안내</strong>
           <Link href="/blog">전기안전 노트</Link>
           <Link href="/#process">출동 절차</Link>
-          <Link href="/#contact">24시간 문의</Link>
+          <a href={siteConfig.phoneHref}>24시간 긴급전화</a>
           <Link href="/admin" rel="nofollow">
             관리자
           </Link>
@@ -31,7 +31,7 @@ export function SiteFooter() {
         <div className="footer-contact">
           <strong>대전 · 청주</strong>
           <p>365일 24시간 긴급 전기출동</p>
-          <p>{siteConfig.phoneDisplay}</p>
+          <a className="footer-phone" href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
           {siteConfig.email && <p>{siteConfig.email}</p>}
           {siteConfig.address && <p>{siteConfig.address}</p>}
           {siteConfig.registrationNumber && <p>사업자등록번호 {siteConfig.registrationNumber}</p>}

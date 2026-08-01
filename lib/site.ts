@@ -1,10 +1,15 @@
+const phoneDigits = (process.env.NEXT_PUBLIC_PHONE ?? "").replace(/\D/g, "") || "01080715580";
+const phoneE164 = phoneDigits.startsWith("0") ? `+82${phoneDigits.slice(1)}` : `+${phoneDigits}`;
+
 export const siteConfig = {
   name: "램프맨",
   englishName: "LAMPMAN",
   description:
     "대전·청주 365일 24시간 전기수리·전기공사. 누전, 정전, 차단기, 분전반과 배선 문제를 빠르게 확인합니다.",
-  phone: process.env.NEXT_PUBLIC_PHONE ?? "",
-  phoneDisplay: process.env.NEXT_PUBLIC_PHONE_DISPLAY ?? "24시간 출동 상담",
+  phone: phoneDigits,
+  phoneE164,
+  phoneHref: `tel:${phoneE164}`,
+  phoneDisplay: process.env.NEXT_PUBLIC_PHONE_DISPLAY || "010-8071-5580",
   email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
   legalName: process.env.NEXT_PUBLIC_BUSINESS_NAME ?? "램프맨",
   address: process.env.NEXT_PUBLIC_BUSINESS_ADDRESS ?? "",

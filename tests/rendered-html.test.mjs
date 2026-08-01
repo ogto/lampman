@@ -45,6 +45,12 @@ test("server-renders the Lampman SEO homepage", async () => {
   assert.match(html, /불이 꺼진 순간/);
   assert.match(html, /href="\/daejeon\/electrical-repair"/);
   assert.match(html, /href="\/cheongju\/electrical-construction"/);
+  assert.match(html, /href="tel:\+821080715580"/);
+  assert.match(html, /010-8071-5580/);
+  assert.match(html, /급할 때 가장 <em>많이 묻는 것\.<\/em>/);
+  assert.match(html, /지금 전기 문제를 그대로 알려주세요\./);
+  assert.doesNotMatch(html, /급할 때 가장<br/);
+  assert.doesNotMatch(html, /지금 전기 문제를<br/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
@@ -58,7 +64,9 @@ test("server-renders a unique regional service page", async () => {
   assert.match(html, /대전 24시간 전기수리/);
   assert.match(html, /누전·차단기/);
   assert.match(html, /전체 정전/);
-  assert.match(html, /<h1>대전<br\/>.*24시간.*전기수리<\/h1>/s);
+  assert.match(html, /<h1>대전.*24시간.*전기수리<\/h1>/s);
+  assert.doesNotMatch(html, /<h1>대전<br/);
+  assert.match(html, /href="tel:\+821080715580"/);
   assert.doesNotMatch(html, /<title>청주 24시간 전기공사/);
 });
 

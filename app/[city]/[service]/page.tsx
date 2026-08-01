@@ -65,10 +65,19 @@ export default async function ServicePage({ params }: Props) {
           "@type": "Electrician",
           name: siteConfig.legalName,
           url: origin,
-          ...(siteConfig.phone ? { telephone: siteConfig.phone } : {}),
+          telephone: siteConfig.phoneE164,
         },
         areaServed: { "@type": "City", name: cityInfo.province },
         url: `${origin}/${city}/${service}`,
+        availableChannel: {
+          "@type": "ServiceChannel",
+          serviceUrl: `${origin}/${city}/${service}`,
+          servicePhone: {
+            "@type": "ContactPoint",
+            telephone: siteConfig.phoneE164,
+            contactType: "emergency service",
+          },
+        },
       }} />
 
       <section className={`service-hero ${isRepair ? "repair-hero" : "work-hero"}`}>
@@ -77,22 +86,22 @@ export default async function ServicePage({ params }: Props) {
         <div className="shell service-hero-inner">
           <div className="breadcrumbs"><Link href="/">홈</Link><span>/</span><Link href={`/${city}`}>{cityInfo.ko}</Link><span>/</span><b>{serviceInfo.ko}</b></div>
           <p className="eyebrow"><span /> {serviceInfo.eyebrow}</p>
-          <h1>{cityInfo.ko}<br /><em>24시간 </em>{serviceInfo.ko}</h1>
+          <h1>{cityInfo.ko} <em>24시간 </em>{serviceInfo.ko}</h1>
           <p>{serviceInfo.summary}</p>
-          <Link className="button button-primary" href="/#contact">지금 출동 문의 ↗</Link>
+          <a className="button button-primary button-phone" href={siteConfig.phoneHref}>{siteConfig.phoneDisplay} 전화 ↗</a>
         </div>
       </section>
 
       <section className="service-overview section-pad">
         <div className="shell service-overview-grid">
-          <div><p className="eyebrow"><span /> {cityInfo.ko.toUpperCase()} FOCUS</p><h2>보이는 증상보다<br /><em>원인을 먼저.</em></h2></div>
+          <div><p className="eyebrow"><span /> {cityInfo.ko.toUpperCase()} FOCUS</p><h2>보이는 증상보다 <em>원인을 먼저.</em></h2></div>
           <div><p className="large-copy">{uniqueCopy}</p><p>{cityInfo.ko} 24시간 {serviceInfo.ko} 상담은 출동 전 정전 범위와 위험 신호를 확인하고, 현장에서는 작업 전 원인과 범위를 설명하는 흐름으로 진행합니다.</p></div>
         </div>
       </section>
 
       <section className="issue-section section-pad">
         <div className="shell">
-          <div className="section-heading heading-inline"><div><p className="eyebrow"><span /> CHECKLIST</p><h2>이런 문제를<br /><em>확인합니다.</em></h2></div><p>{cityInfo.districts.join(" · ")} 생활권 상담</p></div>
+          <div className="section-heading heading-inline"><div><p className="eyebrow"><span /> CHECKLIST</p><h2>이런 문제를 <em>확인합니다.</em></h2></div><p>{cityInfo.districts.join(" · ")} 생활권 상담</p></div>
           <div className="issue-grid">
             {serviceInfo.issues.map((issue, index) => <div key={issue}><span>{String(index + 1).padStart(2, "0")}</span><h3>{issue}</h3><p>증상과 현장 조건을 확인해 필요한 점검 및 작업 범위를 안내합니다.</p></div>)}
           </div>
@@ -101,13 +110,13 @@ export default async function ServicePage({ params }: Props) {
 
       <section className="service-process section-pad">
         <div className="shell service-process-grid">
-          <div className="sticky-title"><p className="eyebrow"><span /> PROCESS</p><h2>램프맨의<br /><em>작업 흐름.</em></h2></div>
+          <div className="sticky-title"><p className="eyebrow"><span /> PROCESS</p><h2>램프맨의 <em>작업 흐름.</em></h2></div>
           <ol>{serviceInfo.process.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{step}</h3><p>{index === 0 ? "급한 상황에서 먼저 해야 할 일과 피해야 할 행동부터 안내합니다." : index === 1 ? "측정과 육안 확인을 통해 증상과 원인의 범위를 좁힙니다." : index === 2 ? "현장 조건에 따라 달라지는 작업 범위와 비용 기준을 설명합니다." : "작업 후 전원과 회로의 동작 상태를 다시 확인합니다."}</p></div></li>)}</ol>
         </div>
       </section>
 
       <section className="safety-banner">
-        <div className="shell"><span>SAFETY FIRST</span><h2>연기·불꽃·강한 탄 냄새가 있다면<br />설비에 접근하지 말고 대피 후 119에 신고하세요.</h2></div>
+        <div className="shell"><span>SAFETY FIRST</span><h2>연기·불꽃·강한 탄 냄새가 있다면 설비에 접근하지 말고 대피 후 119에 신고하세요.</h2></div>
       </section>
       <ContactBand />
     </main>

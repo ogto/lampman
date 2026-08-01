@@ -47,10 +47,18 @@ export default async function CityPage({ params }: Props) {
             "@type": "Electrician",
             name: siteConfig.legalName,
             url: origin,
-            ...(siteConfig.phone ? { telephone: siteConfig.phone } : {}),
+            telephone: siteConfig.phoneE164,
           },
           areaServed: { "@type": "City", name: data.province },
-          availableChannel: { "@type": "ServiceChannel", serviceUrl: `${origin}/${city}` },
+          availableChannel: {
+            "@type": "ServiceChannel",
+            serviceUrl: `${origin}/${city}`,
+            servicePhone: {
+              "@type": "ContactPoint",
+              telephone: siteConfig.phoneE164,
+              contactType: "emergency service",
+            },
+          },
         }}
       />
       <section className="sub-hero city-hero">
@@ -58,11 +66,12 @@ export default async function CityPage({ params }: Props) {
           <div>
             <div className="breadcrumbs"><Link href="/">홈</Link><span>/</span><b>{data.ko}</b></div>
             <p className="eyebrow"><span /> {data.key.toUpperCase()} / 24 HOURS</p>
-            <h1>{data.ko}의 밤을<br /><em>다시 밝히는 일.</em></h1>
+            <h1>{data.ko}의 밤을 <em>다시 밝히는 일.</em></h1>
             <p className="sub-lead">{data.intro}</p>
             <div className="hero-actions">
-              <Link className="button button-primary" href={`/${city}/electrical-repair`}>24시 전기수리 ↗</Link>
-              <Link className="button button-ghost" href={`/${city}/electrical-construction`}>전기공사 보기</Link>
+              <a className="button button-primary button-phone" href={siteConfig.phoneHref}>{siteConfig.phoneDisplay} 전화 ↗</a>
+              <Link className="button button-ghost" href={`/${city}/electrical-repair`}>24시 전기수리</Link>
+              <Link className="button button-ghost" href={`/${city}/electrical-construction`}>전기공사</Link>
             </div>
           </div>
           <div className="city-visual">
@@ -80,7 +89,7 @@ export default async function CityPage({ params }: Props) {
 
       <section className="city-detail section-pad">
         <div className="shell city-detail-grid">
-          <div><p className="eyebrow"><span /> LOCAL FOCUS</p><h2>지역명만 바꾼<br /><em>서비스가 아닙니다.</em></h2></div>
+          <div><p className="eyebrow"><span /> LOCAL FOCUS</p><h2>지역명만 바꾼 <em>서비스가 아닙니다.</em></h2></div>
           <div>
             <p className="large-copy">{data.detail}</p>
             <div className="district-list">
@@ -93,10 +102,10 @@ export default async function CityPage({ params }: Props) {
       <section className="city-service-section section-pad">
         <div className="shell city-services">
           <Link href={`/${city}/electrical-repair`} className="city-service-card city-service-repair">
-            <span>01 / REPAIR</span><h2>{data.ko}<br />24시간 전기수리</h2><p>누전·정전·차단기·콘센트처럼 갑자기 생긴 생활 전기 이상을 확인합니다.</p><b>서비스 자세히 보기 ↗</b>
+            <span>01 / REPAIR</span><h2>{data.ko} 24시간 전기수리</h2><p>누전·정전·차단기·콘센트처럼 갑자기 생긴 생활 전기 이상을 확인합니다.</p><b>서비스 자세히 보기 ↗</b>
           </Link>
           <Link href={`/${city}/electrical-construction`} className="city-service-card city-service-work">
-            <span>02 / CONSTRUCTION</span><h2>{data.ko}<br />전기공사</h2><p>분전반·배선·전용회로·조명처럼 계획과 시공이 필요한 작업을 안내합니다.</p><b>서비스 자세히 보기 ↗</b>
+            <span>02 / CONSTRUCTION</span><h2>{data.ko} 전기공사</h2><p>분전반·배선·전용회로·조명처럼 계획과 시공이 필요한 작업을 안내합니다.</p><b>서비스 자세히 보기 ↗</b>
           </Link>
         </div>
       </section>
