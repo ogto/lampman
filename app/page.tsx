@@ -130,7 +130,10 @@ export default async function Home() {
               </div>
             </div>
             <div className="proof-copy">
-              <h2>빠른 출동보다 중요한 건 <em>안전한 판단입니다.</em></h2>
+              <h2 className="color-split-heading">
+                <span>빠른 출동보다 중요한 건</span>{" "}
+                <em>안전한 판단입니다.</em>
+              </h2>
               <p className="large-copy">
                 긴급한 순간일수록 무엇을 왜 수리하는지 알 수 있어야 합니다.
                 램프맨은 증상 확인부터 재측정까지 이해하기 쉬운 흐름을 지향합니다.
@@ -148,7 +151,10 @@ export default async function Home() {
           <div className="shell">
             <div className="section-heading heading-inline">
               <div>
-                <h2>두 도시만, <em>더 깊고 빠르게.</em></h2>
+                <h2 className="color-split-heading">
+                  <span>두 도시만,</span>{" "}
+                  <em>더 깊고 빠르게.</em>
+                </h2>
               </div>
               <p>전국을 넓게 말하지 않습니다. 실제로 움직일 수 있는 대전과 청주 생활권에 집중합니다.</p>
             </div>

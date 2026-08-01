@@ -56,6 +56,7 @@ test("server-renders the Lampman SEO homepage", async () => {
   assert.match(html, /og\.png/);
   assert.doesNotMatch(html, decorativeEnglish);
   assert.doesNotMatch(html, /hero-image-light|hero-image-night/);
+  assert.doesNotMatch(html, /사업자등록번호|실제 사업자·연락처/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
 });
 

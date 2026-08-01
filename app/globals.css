@@ -488,7 +488,7 @@ body:has(.admin-page) { background: #eeece4; }
 
 @media (max-width: 800px) {
   :root { --shell: calc(100% - 32px); }
-  body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  body { padding-bottom: 0; }
   .section-pad { padding-block: 92px; }
   .header-inner { height: 76px; }
   .emergency-call-dock { left: 0; right: 0; bottom: 0; min-width: 0; padding: 11px 16px calc(11px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; border-width: 1px 0 0; }
@@ -518,6 +518,7 @@ body:has(.admin-page) { background: #eeece4; }
   .heading-inline { display: grid; gap: 32px; }
   .section-heading { margin-bottom: 48px; }
   .section-heading h2, .proof-copy h2, .work-copy h2, .city-detail h2, .service-overview h2, .sticky-title h2 { font-size: clamp(34px, 10.2vw, 46px); }
+  .color-split-heading > span, .color-split-heading > em { display: block; width: max-content; max-width: 100%; white-space: nowrap; }
   .service-grid, .area-grid, .city-services { grid-template-columns: 1fr; }
   .service-card { min-height: 330px; }
   .proof-image-wrap, .work-image-wrap { min-height: 500px; }
@@ -543,7 +544,8 @@ body:has(.admin-page) { background: #eeece4; }
   .contact-link strong { justify-self: start; font-size: clamp(25px, 8vw, 36px); }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 46px 28px; }
   .footer-grid > div:first-child { grid-column: span 2; }
-  .footer-bottom { display: grid; gap: 10px; }
+  .site-footer { padding-bottom: calc(94px + env(safe-area-inset-bottom)); }
+  .footer-bottom { display: block; }
   .sub-hero { min-height: auto; padding: 132px 0 76px; }
   .city-hero .breadcrumbs { margin-bottom: 34px; }
   .city-hero h1 em { display: block; white-space: nowrap; }
@@ -579,7 +581,7 @@ body:has(.admin-page) { background: #eeece4; }
 }
 
 @media (max-width: 520px) {
-  .proof-copy h2 { font-size: clamp(30px, 9vw, 40px); }
+  .proof-copy h2 { font-size: clamp(27px, 8.4vw, 34px); }
   .service-grid { grid-template-columns: 1fr; }
   .service-card { min-height: 300px; }
   .service-glyph { margin: 36px 0 26px; }

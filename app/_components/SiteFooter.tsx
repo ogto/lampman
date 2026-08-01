@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Brand } from "./Brand";
-import { isBusinessInfoComplete, siteConfig } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
 export function SiteFooter() {
   return (
@@ -34,12 +34,10 @@ export function SiteFooter() {
           <a className="footer-phone" href={siteConfig.phoneHref}>{siteConfig.phoneDisplay}</a>
           {siteConfig.email && <p>{siteConfig.email}</p>}
           {siteConfig.address && <p>{siteConfig.address}</p>}
-          {siteConfig.registrationNumber && <p>사업자등록번호 {siteConfig.registrationNumber}</p>}
         </div>
       </div>
       <div className="shell footer-bottom">
         <span>© {new Date().getFullYear()} 램프맨</span>
-        <span>{isBusinessInfoComplete ? siteConfig.legalName : "실제 사업자·연락처 정보 연결 후 공개 운영"}</span>
       </div>
     </footer>
   );
