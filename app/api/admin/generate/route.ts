@@ -7,7 +7,7 @@ import {
   releaseAiGenerationSlot,
 } from "@/db/blog";
 import { getLampmanAdmin } from "@/lib/admin-auth";
-import { readResponseBuffer } from "@/lib/read-response-buffer";
+import { copyToArrayBuffer, readResponseBuffer } from "@/lib/read-response-buffer";
 
 const MAX_SOURCE_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_PREPARED_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -68,7 +68,7 @@ function hasExpectedSignature(bytes: Uint8Array, type: string): boolean {
   return false;
 }
 
-async function sanitizeImage(source: Buffer): Promise<Buffer> {
+async function sanitizeImage(source: Buffer): Promise<ArrayBuffer> {
   const bytes = await sharp(source, {
     failOn: "error",
     limitInputPixels: 80_000_000,
@@ -87,7 +87,11 @@ async function sanitizeImage(source: Buffer): Promise<Buffer> {
   if (!bytes.byteLength || bytes.byteLength > MAX_PREPARED_IMAGE_BYTES) {
     throw new Error("SANITIZED_IMAGE_TOO_LARGE");
   }
-  return bytes;
+
+  // Sharp may return a Buffer backed by SharedArrayBuffer on Vercel. The Blob
+  // SDK's bundled fetch rejects that body type, so cross the upload boundary
+  // with an explicitly allocated, non-shared ArrayBuffer.
+  return copyToArrayBuffer(bytes);
 }
 
 function cleanSlug(value: string): string {
@@ -276,13 +280,18 @@ async function prepareImages(urls: string[]): Promise<{
   const sourceImages: string[] = [];
   const createdPreparedImages: string[] = [];
   const year = new Date().getUTCFullYear();
+  let activeImageIndex = -1;
+  let activeStage = "start";
 
   try {
-    for (const url of urls) {
+    for (const [index, url] of urls.entries()) {
+      activeImageIndex = index;
+      activeStage = "read-metadata";
       const metadata = await head(url);
       const pathname = metadata.pathname;
 
       if (pathname.startsWith(PREPARED_PREFIX)) {
+        activeStage = "validate-prepared";
         if (metadata.contentType !== "image/webp" || metadata.size > MAX_PREPARED_IMAGE_BYTES) {
           throw new Error("INVALID_PREPARED_IMAGE");
         }
@@ -301,6 +310,7 @@ async function prepareImages(urls: string[]): Promise<{
 
       const sourceId = createHash("sha256").update(metadata.url).digest("hex").slice(0, 32);
       const preparedPath = `${PREPARED_PREFIX}${year}/${sourceId}.webp`;
+      activeStage = "reuse-prepared";
       try {
         const existing = await head(preparedPath);
         if (
@@ -315,12 +325,14 @@ async function prepareImages(urls: string[]): Promise<{
         // This source has not been prepared yet.
       }
 
+      activeStage = "download-source";
       const sourceResponse = await fetch(metadata.url, {
         cache: "no-store",
         signal: AbortSignal.timeout(30_000),
       });
       if (!sourceResponse.ok) throw new Error("IMAGE_DOWNLOAD_FAILED");
       const source = await readResponseBuffer(sourceResponse, MAX_SOURCE_IMAGE_BYTES);
+      activeStage = "validate-source";
       if (source.byteLength !== metadata.size || source.byteLength > MAX_SOURCE_IMAGE_BYTES) {
         throw new Error("INVALID_IMAGE_SIZE");
       }
@@ -328,7 +340,9 @@ async function prepareImages(urls: string[]): Promise<{
         throw new Error("INVALID_IMAGE_SIGNATURE");
       }
 
+      activeStage = "sanitize-source";
       const safeImage = await sanitizeImage(source);
+      activeStage = "upload-prepared";
       const blob = await put(preparedPath, safeImage, {
         access: "public",
         addRandomSuffix: false,
@@ -340,6 +354,13 @@ async function prepareImages(urls: string[]): Promise<{
       createdPreparedImages.push(blob.url);
     }
   } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      message: "image preparation stage failed",
+      imageIndex: activeImageIndex,
+      stage: activeStage,
+      error: error instanceof Error ? error.message : String(error),
+    }));
     if (createdPreparedImages.length > 0) {
       await del(createdPreparedImages).catch((cleanupError) => {
         console.error("Failed to clean partially prepared images", cleanupError);

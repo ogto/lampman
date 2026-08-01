@@ -43,3 +43,9 @@ export async function readResponseBuffer(
   if (totalBytes === 0) throw new Error("RESPONSE_BODY_EMPTY");
   return Buffer.concat(chunks, totalBytes);
 }
+
+export function copyToArrayBuffer(source: Uint8Array): ArrayBuffer {
+  const copy = new ArrayBuffer(source.byteLength);
+  new Uint8Array(copy).set(source);
+  return copy;
+}
