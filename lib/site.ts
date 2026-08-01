@@ -52,7 +52,6 @@ export const serviceData = {
   "electrical-repair": {
     key: "electrical-repair",
     ko: "전기수리",
-    eyebrow: "EMERGENCY REPAIR",
     summary:
       "갑자기 내려간 차단기, 일부 정전, 콘센트 발열과 조명 이상을 증상별로 확인합니다.",
     issues: ["누전·차단기 작동", "일부 또는 전체 정전", "콘센트·스위치 이상", "조명 깜빡임·점등 불량"],
@@ -61,7 +60,6 @@ export const serviceData = {
   "electrical-construction": {
     key: "electrical-construction",
     ko: "전기공사",
-    eyebrow: "ELECTRICAL WORK",
     summary:
       "주택·상가의 배선, 분전반, 전용회로와 조명 공사를 현장 조건에 맞게 계획합니다.",
     issues: ["분전반·차단기 교체", "콘센트 증설·전용회로", "상가·주택 배선 정비", "LED·공간 조명 설치"],

@@ -13,23 +13,30 @@ export function HeroScene() {
     if (!section) return;
 
     let frame = 0;
+    let travel = 1;
+    let lastProgress = -1;
+
     const update = () => {
       frame = 0;
-      const rect = section.getBoundingClientRect();
-      const travel = Math.max(1, section.offsetHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, -rect.top / travel));
+      const progress = Math.min(1, Math.max(0, window.scrollY / travel));
+      if (Math.abs(progress - lastProgress) < 0.001) return;
+      lastProgress = progress;
       section.style.setProperty("--hero-progress", progress.toFixed(4));
     };
     const requestUpdate = () => {
       if (!frame) frame = window.requestAnimationFrame(update);
     };
+    const measure = () => {
+      travel = Math.max(1, section.offsetHeight - window.innerHeight);
+      requestUpdate();
+    };
 
-    update();
+    measure();
     window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
+    window.addEventListener("resize", measure);
     return () => {
       window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
+      window.removeEventListener("resize", measure);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
@@ -38,29 +45,20 @@ export function HeroScene() {
     <section className="hero hero-scroll" ref={sectionRef}>
       <div className="hero-sticky">
         <Image
-          className="hero-image hero-image-night"
+          className="hero-image"
           src="/images/lampman-hero.png"
           alt="야간에 아파트 분전반을 점검하는 전기 기술자"
           fill
           priority
           sizes="100vw"
         />
-        <Image
-          className="hero-image hero-image-light"
-          src="/images/lampman-hero.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          aria-hidden="true"
-        />
+        <div className="hero-night-overlay" aria-hidden="true" />
         <div className="hero-shade" />
         <div className="hero-light-beam" aria-hidden="true" />
         <div className="hero-voltage-line" aria-hidden="true"><span /></div>
 
         <div className="shell hero-content">
           <div className="hero-copy">
-            <p className="eyebrow"><span /> DAEJEON · CHEONGJU / 24 HOURS</p>
             <h1>
               <span>불이 꺼진 순간,</span>
               <em>램프맨은 켜집니다.</em>
@@ -82,16 +80,13 @@ export function HeroScene() {
         </div>
 
         <a className="hero-call-rail" href={contactHref} aria-label={`${siteConfig.phoneDisplay} 긴급출동 전화`}>
-          <span>24H DIRECT CALL</span>
           <strong>{siteConfig.phoneDisplay}</strong>
           <b>전화 연결 ↗</b>
         </a>
 
         <div className="hero-scroll-cue" aria-hidden="true">
-          <span>SCROLL TO LIGHT UP</span>
           <i><b /></i>
         </div>
-        <div className="hero-index" aria-hidden="true">01 / LIGHT RESTORED</div>
       </div>
     </section>
   );

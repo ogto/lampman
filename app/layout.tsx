@@ -68,7 +68,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <SiteHeader />
         <div id="main-content">{children}</div>
         <SiteFooter />
-        <div className="page-noise" aria-hidden="true" />
       </body>
     </html>
   );

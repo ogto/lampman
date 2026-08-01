@@ -38,7 +38,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="shell footer-bottom">
-        <span>© {new Date().getFullYear()} LAMPMAN</span>
+        <span>© {new Date().getFullYear()} 램프맨</span>
         <span>{isBusinessInfoComplete ? siteConfig.legalName : "실제 사업자·연락처 정보 연결 후 공개 운영"}</span>
       </div>
     </footer>

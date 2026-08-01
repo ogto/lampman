@@ -7,7 +7,6 @@ export function ContactBand() {
       <div className="contact-orb" aria-hidden="true" />
       <div className="shell contact-band-inner">
         <div className="contact-heading">
-          <p className="eyebrow eyebrow-dark"><span /> 24H EMERGENCY CALL</p>
           <h2>지금 전기 문제를 그대로 알려주세요.</h2>
         </div>
         <div className="contact-copy">

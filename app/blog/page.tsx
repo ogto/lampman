@@ -30,7 +30,6 @@ export default async function BlogPage() {
     <main className="blog-page subpage">
       <section className="blog-hero">
         <div className="shell">
-          <p className="eyebrow"><span /> LAMPMAN FIELD NOTES</p>
           <h1>전기를 쉽게, <em>현장은 솔직하게.</em></h1>
           <p>검색을 위한 문장보다 실제로 도움이 되는 증상 확인법과 현장 기준을 기록합니다.</p>
           <a className="blog-call" href={siteConfig.phoneHref}>24시간 긴급출동 {siteConfig.phoneDisplay} ↗</a>

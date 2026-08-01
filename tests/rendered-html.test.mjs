@@ -5,6 +5,7 @@ import { after, before, test } from "node:test";
 
 const port = 3217;
 const baseUrl = `http://127.0.0.1:${port}`;
+const decorativeEnglish = /DAEJEON · CHEONGJU|WHAT WE FIX|OUR STANDARD|SERVICE AREA|SPACE & LIGHTING|HOW IT WORKS|FIELD NOTES|24H EMERGENCY CALL|ELECTRIC CARE|DIRECT CALL|SCROLL TO LIGHT UP|LIGHT RESTORED|LOCAL FOCUS|CHECKLIST|SAFETY FIRST|EMERGENCY REPAIR|ELECTRICAL WORK/;
 let server;
 
 before(async () => {
@@ -53,6 +54,8 @@ test("server-renders the Lampman SEO homepage", async () => {
   assert.doesNotMatch(html, /지금 전기 문제를<br/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /og\.png/);
+  assert.doesNotMatch(html, decorativeEnglish);
+  assert.doesNotMatch(html, /hero-image-light|hero-image-night/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
 });
 
@@ -67,7 +70,16 @@ test("server-renders a unique regional service page", async () => {
   assert.match(html, /<h1>대전.*24시간.*전기수리<\/h1>/s);
   assert.doesNotMatch(html, /<h1>대전<br/);
   assert.match(html, /href="tel:\+821080715580"/);
+  assert.doesNotMatch(html, decorativeEnglish);
   assert.doesNotMatch(html, /<title>청주 24시간 전기공사/);
+});
+
+test("regional and blog hubs omit decorative English labels", async () => {
+  for (const path of ["/daejeon", "/cheongju", "/blog"]) {
+    const response = await fetch(`${baseUrl}${path}`);
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(await response.text(), decorativeEnglish);
+  }
 });
 
 test("serves source and optimized brand images", async () => {

@@ -65,7 +65,6 @@ export default async function CityPage({ params }: Props) {
         <div className="shell sub-hero-grid">
           <div>
             <div className="breadcrumbs"><Link href="/">홈</Link><span>/</span><b>{data.ko}</b></div>
-            <p className="eyebrow"><span /> {data.key.toUpperCase()} / 24 HOURS</p>
             <h1>{data.ko}의 밤을 <em>다시 밝히는 일.</em></h1>
             <p className="sub-lead">{data.intro}</p>
             <div className="hero-actions">
@@ -82,14 +81,14 @@ export default async function CityPage({ params }: Props) {
               height={isDaejeon ? 1086 : 1024}
               sizes="(max-width: 900px) 100vw, 48vw"
             />
-            <div className="city-visual-tag"><span>AREA</span><strong>{data.ko} 전 지역</strong></div>
+            <div className="city-visual-tag"><strong>{data.ko} 전 지역</strong></div>
           </div>
         </div>
       </section>
 
       <section className="city-detail section-pad">
         <div className="shell city-detail-grid">
-          <div><p className="eyebrow"><span /> LOCAL FOCUS</p><h2>지역명만 바꾼 <em>서비스가 아닙니다.</em></h2></div>
+          <div><h2>지역명만 바꾼 <em>서비스가 아닙니다.</em></h2></div>
           <div>
             <p className="large-copy">{data.detail}</p>
             <div className="district-list">
@@ -102,10 +101,10 @@ export default async function CityPage({ params }: Props) {
       <section className="city-service-section section-pad">
         <div className="shell city-services">
           <Link href={`/${city}/electrical-repair`} className="city-service-card city-service-repair">
-            <span>01 / REPAIR</span><h2>{data.ko} 24시간 전기수리</h2><p>누전·정전·차단기·콘센트처럼 갑자기 생긴 생활 전기 이상을 확인합니다.</p><b>서비스 자세히 보기 ↗</b>
+            <h2>{data.ko} 24시간 전기수리</h2><p>누전·정전·차단기·콘센트처럼 갑자기 생긴 생활 전기 이상을 확인합니다.</p><b>서비스 자세히 보기 ↗</b>
           </Link>
           <Link href={`/${city}/electrical-construction`} className="city-service-card city-service-work">
-            <span>02 / CONSTRUCTION</span><h2>{data.ko} 전기공사</h2><p>분전반·배선·전용회로·조명처럼 계획과 시공이 필요한 작업을 안내합니다.</p><b>서비스 자세히 보기 ↗</b>
+            <h2>{data.ko} 전기공사</h2><p>분전반·배선·전용회로·조명처럼 계획과 시공이 필요한 작업을 안내합니다.</p><b>서비스 자세히 보기 ↗</b>
           </Link>
         </div>
       </section>

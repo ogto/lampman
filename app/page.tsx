@@ -93,7 +93,6 @@ export default async function Home() {
           <div className="shell">
             <div className="section-heading heading-split">
               <div>
-                <p className="eyebrow"><span /> WHAT WE FIX</p>
                 <h2>전기 문제는 <em>원인부터 다릅니다.</em></h2>
               </div>
               <p>
@@ -127,12 +126,10 @@ export default async function Home() {
                 sizes="(max-width: 900px) 100vw, 52vw"
               />
               <div className="proof-image-label">
-                <span>DIAGNOSIS FIRST</span>
                 <strong>측정하고, 설명하고, 작업합니다.</strong>
               </div>
             </div>
             <div className="proof-copy">
-              <p className="eyebrow"><span /> OUR STANDARD</p>
               <h2>빠른 출동보다 중요한 건 <em>안전한 판단입니다.</em></h2>
               <p className="large-copy">
                 긴급한 순간일수록 무엇을 왜 수리하는지 알 수 있어야 합니다.
@@ -151,19 +148,16 @@ export default async function Home() {
           <div className="shell">
             <div className="section-heading heading-inline">
               <div>
-                <p className="eyebrow"><span /> SERVICE AREA</p>
                 <h2>두 도시만, <em>더 깊고 빠르게.</em></h2>
               </div>
               <p>전국을 넓게 말하지 않습니다. 실제로 움직일 수 있는 대전과 청주 생활권에 집중합니다.</p>
             </div>
             <div className="area-grid">
               <Link href="/daejeon" className="area-card area-card-dark">
-                <span className="area-kicker">DAEJEON / 01</span>
                 <div><h3>대전</h3><p>유성구 · 서구 · 중구 · 동구 · 대덕구</p></div>
                 <span className="area-link">대전 출동 안내 ↗</span>
               </Link>
               <Link href="/cheongju" className="area-card area-card-light">
-                <span className="area-kicker">CHEONGJU / 02</span>
                 <div><h3>청주</h3><p>흥덕구 · 상당구 · 청원구 · 서원구 · 오창 · 오송</p></div>
                 <span className="area-link">청주 출동 안내 ↗</span>
               </Link>
@@ -174,7 +168,6 @@ export default async function Home() {
         <section className="work-section section-pad">
           <div className="shell work-grid">
             <div className="work-copy">
-              <p className="eyebrow"><span /> SPACE & LIGHTING</p>
               <h2>고치는 기술에서, <em>공간을 켜는 감각까지.</em></h2>
               <p>
                 상가와 주택의 조명은 밝기만의 문제가 아닙니다. 기존 회로와
@@ -192,7 +185,7 @@ export default async function Home() {
         <section className="process-section section-pad" id="process">
           <div className="shell">
             <div className="section-heading heading-inline">
-              <div><p className="eyebrow"><span /> HOW IT WORKS</p><h2>전화 한 통부터 <em>복구 확인까지.</em></h2></div>
+              <div><h2>전화 한 통부터 <em>복구 확인까지.</em></h2></div>
               <p>급할수록 흐름은 단순하고 투명해야 합니다.</p>
             </div>
             <ol className="process-line">
@@ -211,7 +204,7 @@ export default async function Home() {
         <section className="journal-section section-pad">
           <div className="shell">
             <div className="section-heading heading-inline">
-              <div><p className="eyebrow"><span /> FIELD NOTES</p><h2>전기안전 <em>노트.</em></h2></div>
+              <div><h2>전기안전 <em>노트.</em></h2></div>
               <Link className="text-link" href="/blog">모든 글 보기 <span>↗</span></Link>
             </div>
             <div className="journal-grid">
@@ -223,7 +216,6 @@ export default async function Home() {
         <section className="faq-section section-pad">
           <div className="shell faq-grid">
             <div className="faq-heading">
-              <p className="eyebrow"><span /> FAQ</p>
               <h2>급할 때 가장 <em>많이 묻는 것.</em></h2>
               <a className="faq-call" href={siteConfig.phoneHref}>바로 전화 {siteConfig.phoneDisplay} ↗</a>
             </div>
