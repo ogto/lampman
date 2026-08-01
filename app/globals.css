@@ -139,6 +139,7 @@ h1 em, h2 em { color: var(--amber); font-style: normal; font-weight: 760; }
 .heading-split { display: grid; grid-template-columns: 1fr .72fr; gap: 10vw; align-items: end; }
 .heading-inline { display: flex; justify-content: space-between; align-items: end; gap: 60px; }
 .section-heading h2, .proof-copy h2, .work-copy h2, .faq-heading h2, .city-detail h2, .service-overview h2, .sticky-title h2 { margin: 0; font-size: clamp(46px, 5vw, 78px); line-height: 1.02; letter-spacing: -.065em; font-weight: 470; text-wrap: balance; }
+.color-split-heading > span, .color-split-heading > em { display: block; width: max-content; max-width: 100%; white-space: nowrap; }
 .section-heading > p, .heading-split > p, .heading-inline > p { max-width: 520px; margin: 0 0 6px; color: var(--muted); font-size: 17px; line-height: 1.8; }
 
 /* Services */
@@ -212,6 +213,11 @@ h1 em, h2 em { color: var(--amber); font-style: normal; font-weight: 760; }
 .process-line > li > span { color: var(--muted); font: 700 10px/1 monospace; }
 .process-line strong { font-size: 22px; }
 .process-line p { color: var(--muted); font-size: 13px; max-width: 240px; }
+
+@media (min-width: 1200px) {
+  .process-line strong { display: block; line-height: 1.35; }
+  .process-line p { min-height: 3.2em; margin: 8px 0 0; line-height: 1.6; }
+}
 
 /* Journal */
 .journal-section { background: var(--ink); color: var(--white); }
@@ -518,7 +524,6 @@ body:has(.admin-page) { background: #eeece4; }
   .heading-inline { display: grid; gap: 32px; }
   .section-heading { margin-bottom: 48px; }
   .section-heading h2, .proof-copy h2, .work-copy h2, .city-detail h2, .service-overview h2, .sticky-title h2 { font-size: clamp(34px, 10.2vw, 46px); }
-  .color-split-heading > span, .color-split-heading > em { display: block; width: max-content; max-width: 100%; white-space: nowrap; }
   .service-grid, .area-grid, .city-services { grid-template-columns: 1fr; }
   .service-card { min-height: 330px; }
   .proof-image-wrap, .work-image-wrap { min-height: 500px; }
