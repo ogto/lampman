@@ -1,4 +1,4 @@
-import { check, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { check, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 export const blogPosts = pgTable(
@@ -12,6 +12,10 @@ export const blogPosts = pgTable(
     city: text("city").notNull().default("대전·청주"),
     service: text("service").notNull().default("전기안전 가이드"),
     imageKey: text("image_key"),
+    imageKeys: jsonb("image_keys")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     imageAlt: text("image_alt").notNull().default(""),
     status: text("status", { enum: ["draft", "published"] })
       .notNull()

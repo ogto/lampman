@@ -13,6 +13,7 @@ export type BlogRecord = {
   city: string;
   service: string;
   imageKey: string | null;
+  imageKeys: string[];
   imageAlt: string;
   status: BlogStatus;
   seoTitle: string;
@@ -41,6 +42,7 @@ export function ensureBlogSchema(): Promise<void> {
         city TEXT NOT NULL DEFAULT '대전·청주',
         service TEXT NOT NULL DEFAULT '전기안전 가이드',
         image_key TEXT,
+        image_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
         image_alt TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'draft'
           CONSTRAINT blog_posts_status_check CHECK (status IN ('draft', 'published')),
@@ -55,6 +57,17 @@ export function ensureBlogSchema(): Promise<void> {
     await sql`
       CREATE INDEX IF NOT EXISTS idx_blog_posts_status_published_at
       ON blog_posts(status, published_at)
+    `;
+    await sql`
+      ALTER TABLE blog_posts
+      ADD COLUMN IF NOT EXISTS image_keys JSONB NOT NULL DEFAULT '[]'::jsonb
+    `;
+    await sql`
+      UPDATE blog_posts
+      SET image_keys = jsonb_build_array(image_key)
+      WHERE image_key IS NOT NULL
+        AND BTRIM(image_key) <> ''
+        AND image_keys = '[]'::jsonb
     `;
     await sql`
       CREATE TABLE IF NOT EXISTS ai_generation_logs (
@@ -77,7 +90,20 @@ export function ensureBlogSchema(): Promise<void> {
 
 type BlogRow = typeof blogPosts.$inferSelect;
 
+function normalizeImageKeys(
+  imageKeys: unknown,
+  imageKey: string | null | undefined,
+): string[] {
+  const cover = imageKey?.trim() || null;
+  const gallery = Array.isArray(imageKeys)
+    ? imageKeys.filter((value): value is string => typeof value === "string")
+    : [];
+  const candidates = cover ? [cover, ...gallery] : gallery;
+  return [...new Set(candidates.map((value) => value.trim()).filter(Boolean))];
+}
+
 function rowToPost(row: BlogRow): BlogRecord {
+  const imageKeys = normalizeImageKeys(row.imageKeys, row.imageKey);
   return {
     id: row.id,
     slug: row.slug,
@@ -86,7 +112,8 @@ function rowToPost(row: BlogRow): BlogRecord {
     content: row.content,
     city: row.city,
     service: row.service,
-    imageKey: row.imageKey,
+    imageKey: row.imageKey?.trim() || imageKeys[0] || null,
+    imageKeys,
     imageAlt: row.imageAlt,
     status: row.status === "published" ? "published" : "draft",
     seoTitle: row.seoTitle,
@@ -158,8 +185,13 @@ export async function findBlogPostById(id: string): Promise<BlogRecord | null> {
 
 export type NewBlogPost = Omit<
   BlogRecord,
-  "id" | "createdAt" | "updatedAt" | "publishedAt" | "status"
-> & { status?: BlogStatus };
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "publishedAt"
+  | "status"
+  | "imageKeys"
+> & { imageKeys?: string[]; status?: BlogStatus };
 
 export async function createBlogPost(input: NewBlogPost): Promise<string> {
   const db = getDb();
@@ -167,6 +199,8 @@ export async function createBlogPost(input: NewBlogPost): Promise<string> {
   const id = crypto.randomUUID();
   const now = new Date();
   const status = input.status ?? "draft";
+  const imageKeys = normalizeImageKeys(input.imageKeys, input.imageKey);
+  const imageKey = input.imageKey?.trim() || imageKeys[0] || null;
 
   await db.insert(blogPosts).values({
     id,
@@ -176,7 +210,8 @@ export async function createBlogPost(input: NewBlogPost): Promise<string> {
     content: input.content,
     city: input.city,
     service: input.service,
-    imageKey: input.imageKey,
+    imageKey,
+    imageKeys,
     imageAlt: input.imageAlt,
     status,
     seoTitle: input.seoTitle,
@@ -246,11 +281,11 @@ export async function unpublishBlogPost(id: string): Promise<void> {
     .where(eq(blogPosts.id, id));
 }
 
-export async function claimRateLimitSlot(
+async function claimRateLimitReservation(
   scopeKey: string,
   limit: number,
   windowMs: number,
-): Promise<boolean> {
+): Promise<string | null> {
   await ensureBlogSchema();
 
   const sql = getSql();
@@ -284,12 +319,33 @@ export async function claimRateLimitSlot(
     SELECT EXISTS(SELECT 1 FROM inserted) AS claimed
   `;
 
-  return result[0]?.claimed === true;
+  return result[0]?.claimed === true ? id : null;
+}
+
+export async function claimRateLimitSlot(
+  scopeKey: string,
+  limit: number,
+  windowMs: number,
+): Promise<boolean> {
+  return Boolean(await claimRateLimitReservation(scopeKey, limit, windowMs));
 }
 
 export function claimAiGenerationSlot(
   userId: string,
   limitPerHour = 12,
-): Promise<boolean> {
-  return claimRateLimitSlot(`ai-generation:${userId}`, limitPerHour, 60 * 60 * 1000);
+): Promise<string | null> {
+  return claimRateLimitReservation(`ai-generation:${userId}`, limitPerHour, 60 * 60 * 1000);
+}
+
+export async function releaseAiGenerationSlot(
+  reservationId: string,
+  userId: string,
+): Promise<void> {
+  await ensureBlogSchema();
+  const sql = getSql();
+  await sql`
+    DELETE FROM ai_generation_logs
+    WHERE id = ${reservationId}
+      AND user_id = ${`ai-generation:${userId}`}
+  `;
 }

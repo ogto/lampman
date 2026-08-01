@@ -36,5 +36,14 @@ export async function getPublishedPost(
 }
 
 export function postImageUrl(post: BlogRecord): string {
-  return mediaUrl(post.imageKey);
+  return mediaUrl(post.imageKey ?? post.imageKeys[0]);
+}
+
+export function postImageUrls(post: BlogRecord): string[] {
+  const cover = post.imageKey?.trim() || null;
+  const keys = cover ? [cover, ...post.imageKeys] : post.imageKeys;
+  const uniqueKeys = [...new Set(keys.map((key) => key.trim()).filter(Boolean))];
+  return uniqueKeys.length > 0
+    ? uniqueKeys.map((key) => mediaUrl(key))
+    : [postImageUrl(post)];
 }

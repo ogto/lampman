@@ -39,7 +39,13 @@ export function isRemoteMediaUrl(value: string): boolean {
 }
 
 export function bypassImageOptimization(value: string): boolean {
-  return isRemoteMediaUrl(value) || value.startsWith("/media/");
+  if (value.startsWith("/media/")) return true;
+  if (!isRemoteMediaUrl(value)) return false;
+  try {
+    return !new URL(value).hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return true;
+  }
 }
 
 export function absoluteMediaUrl(value: string, origin: string): string {

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireLampmanAdmin } from "@/lib/admin-auth";
 import { findBlogPostById } from "@/db/blog";
-import { postImageUrl } from "@/lib/posts";
+import { postImageUrl, postImageUrls } from "@/lib/posts";
 import { publishPostAction, savePostAction, unpublishPostAction } from "@/app/admin/actions";
 
 type Props = {
@@ -18,6 +18,8 @@ export default async function EditPostPage({ params, searchParams }: Props) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const post = await findBlogPostById(id);
   if (!post) notFound();
+  const imageUrls = postImageUrls(post);
+  const additionalImageUrls = imageUrls.slice(1);
 
   return (
     <main className="admin-page admin-editor-page">
@@ -32,6 +34,24 @@ export default async function EditPostPage({ params, searchParams }: Props) {
         <div className="editor-layout">
           <div className="editor-main">
             {post.imageKey && <div className="editor-image"><Image src={postImageUrl(post)} alt={post.imageAlt} fill unoptimized sizes="760px" /></div>}
+            {additionalImageUrls.length > 0 && (
+              <section className="editor-gallery" aria-label="업로드된 추가 사진">
+                {additionalImageUrls.map((imageUrl, index) => (
+                  <figure className="editor-gallery-item" key={imageUrl}>
+                    <div className="editor-gallery-image">
+                      <Image
+                        src={imageUrl}
+                        alt={`${post.imageAlt} 추가 사진 ${index + 2}`}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 760px) 50vw, 360px"
+                      />
+                    </div>
+                    <figcaption>추가 사진 {index + 1}</figcaption>
+                  </figure>
+                ))}
+              </section>
+            )}
             <form action={savePostAction} className="editor-form" id="post-edit-form">
               <input type="hidden" name="id" value={post.id} />
               <label><span>제목</span><input name="title" defaultValue={post.title} required /></label>

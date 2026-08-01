@@ -6,7 +6,7 @@ import { ContactBand } from "@/app/_components/ContactBand";
 import { JsonLd } from "@/app/_components/JsonLd";
 import { MarkdownArticle } from "@/app/_components/MarkdownArticle";
 import { absoluteMediaUrl, bypassImageOptimization } from "@/lib/media";
-import { getPublishedPost, postImageUrl } from "@/lib/posts";
+import { getPublishedPost, postImageUrl, postImageUrls } from "@/lib/posts";
 import { seedPosts } from "@/lib/seed-posts";
 import { getRequestOrigin } from "@/lib/url";
 import { siteConfig } from "@/lib/site";
@@ -34,8 +34,10 @@ export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
   const [post, origin] = await Promise.all([getPublishedPost(slug), getRequestOrigin()]);
   if (!post) notFound();
-  const imageUrl = postImageUrl(post);
-  const absoluteImageUrl = absoluteMediaUrl(imageUrl, origin);
+  const imageUrls = postImageUrls(post);
+  const imageUrl = imageUrls[0] ?? postImageUrl(post);
+  const additionalImageUrls = imageUrls.slice(1);
+  const absoluteImageUrls = imageUrls.map((url) => absoluteMediaUrl(url, origin));
   const date = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(post.publishedAt ?? post.createdAt));
 
   return (
@@ -45,7 +47,7 @@ export default async function BlogPostPage({ params }: Props) {
         "@type": "Article",
         headline: post.title,
         description: post.excerpt,
-        image: absoluteImageUrl,
+        image: absoluteImageUrls,
         datePublished: post.publishedAt ?? post.createdAt,
         dateModified: post.updatedAt,
         author: { "@type": "Organization", name: "램프맨" },
@@ -63,6 +65,23 @@ export default async function BlogPostPage({ params }: Props) {
       <div className="article-image shell">
         <Image src={imageUrl} alt={post.imageAlt} fill priority unoptimized={bypassImageOptimization(imageUrl)} sizes="(max-width: 1100px) 100vw, 1100px" />
       </div>
+      {additionalImageUrls.length > 0 && (
+        <section className="article-gallery shell" aria-label="현장 추가 사진">
+          {additionalImageUrls.map((galleryImageUrl, index) => (
+            <figure className="article-gallery-item" key={galleryImageUrl}>
+              <Image
+                className="article-gallery-photo"
+                src={galleryImageUrl}
+                alt={`${post.imageAlt} 추가 사진 ${index + 2}`}
+                width={1200}
+                height={800}
+                unoptimized={bypassImageOptimization(galleryImageUrl)}
+                sizes="(max-width: 760px) 100vw, 550px"
+              />
+            </figure>
+          ))}
+        </section>
+      )}
       <article className="article-body shell">
         <aside><span>램프맨 전기안전 노트</span><p>대전·청주 24시간 전기출동 현장에서 필요한 기준을 정리합니다.</p><a href={siteConfig.phoneHref}>긴급전화 {siteConfig.phoneDisplay} ↗</a></aside>
         <MarkdownArticle content={post.content} />
