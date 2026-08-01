@@ -68,12 +68,20 @@ export function HeroScene() {
               이상부터 배선과 분전반까지 빠르게 확인합니다.
             </p>
             <div className="hero-actions">
-              <a className="button button-primary hero-phone" href={contactHref}>
-                <span>24시간 긴급출동</span>
-                <strong>{siteConfig.phoneDisplay}</strong>
+              <a
+                className="hero-phone-cta"
+                href={contactHref}
+                aria-label={`${siteConfig.phoneDisplay} 24시간 긴급출동 전화`}
+              >
+                <span className="hero-phone-copy">
+                  <small>24시간 긴급출동</small>
+                  <strong>{siteConfig.phoneDisplay}</strong>
+                </span>
+                <span className="hero-phone-action" aria-hidden="true">전화 ↗</span>
               </a>
-              <a className="button button-ghost" href="#areas">
-                출동 가능 지역 <span aria-hidden="true">↓</span>
+              <a className="hero-area-link" href="#areas">
+                <span><b>대전 · 청주</b> 출동 가능 지역</span>
+                <i aria-hidden="true">↓</i>
               </a>
             </div>
           </div>
