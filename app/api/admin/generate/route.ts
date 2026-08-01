@@ -7,6 +7,7 @@ import {
   releaseAiGenerationSlot,
 } from "@/db/blog";
 import { getLampmanAdmin } from "@/lib/admin-auth";
+import { readResponseBuffer } from "@/lib/read-response-buffer";
 
 const MAX_SOURCE_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_PREPARED_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -67,8 +68,8 @@ function hasExpectedSignature(bytes: Uint8Array, type: string): boolean {
   return false;
 }
 
-async function sanitizeImage(source: ArrayBuffer): Promise<Buffer> {
-  const bytes = await sharp(Buffer.from(source), {
+async function sanitizeImage(source: Buffer): Promise<Buffer> {
+  const bytes = await sharp(source, {
     failOn: "error",
     limitInputPixels: 80_000_000,
     sequentialRead: true,
@@ -168,9 +169,12 @@ async function gatewayImageDataUrls(preparedImages: string[]): Promise<string[]>
   const dataUrls: string[] = [];
   let totalBytes = 0;
   for (const url of preparedImages) {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(30_000),
+    });
     if (!response.ok) throw new Error("AI_IMAGE_DOWNLOAD_FAILED");
-    const source = Buffer.from(await response.arrayBuffer());
+    const source = await readResponseBuffer(response, MAX_PREPARED_IMAGE_BYTES);
     if (!source.byteLength || source.byteLength > MAX_PREPARED_IMAGE_BYTES) {
       throw new Error("AI_IMAGE_INVALID_SIZE");
     }
@@ -311,9 +315,12 @@ async function prepareImages(urls: string[]): Promise<{
         // This source has not been prepared yet.
       }
 
-      const sourceResponse = await fetch(metadata.url, { cache: "no-store" });
+      const sourceResponse = await fetch(metadata.url, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(30_000),
+      });
       if (!sourceResponse.ok) throw new Error("IMAGE_DOWNLOAD_FAILED");
-      const source = await sourceResponse.arrayBuffer();
+      const source = await readResponseBuffer(sourceResponse, MAX_SOURCE_IMAGE_BYTES);
       if (source.byteLength !== metadata.size || source.byteLength > MAX_SOURCE_IMAGE_BYTES) {
         throw new Error("INVALID_IMAGE_SIZE");
       }
