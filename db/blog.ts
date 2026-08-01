@@ -1,4 +1,6 @@
-import { env } from "cloudflare:workers";
+import { and, desc, eq, sql as drizzleSql } from "drizzle-orm";
+import { getDb, getSql, hasDatabaseConfiguration } from "./index";
+import { blogPosts } from "./schema";
 
 export type BlogStatus = "draft" | "published";
 
@@ -21,22 +23,16 @@ export type BlogRecord = {
   updatedAt: string;
 };
 
-type DbEnv = { DB?: D1Database };
-
-function database(): D1Database | null {
-  return (env as unknown as DbEnv).DB ?? null;
-}
-
 let schemaReady: Promise<void> | null = null;
 
 export function ensureBlogSchema(): Promise<void> {
   if (schemaReady) return schemaReady;
-  const db = database();
-  if (!db) return Promise.resolve();
+  if (!hasDatabaseConfiguration()) return Promise.resolve();
 
   schemaReady = (async () => {
-    await db.batch([
-      db.prepare(`CREATE TABLE IF NOT EXISTS blog_posts (
+    const sql = getSql();
+    await sql`
+      CREATE TABLE IF NOT EXISTS blog_posts (
         id TEXT PRIMARY KEY NOT NULL,
         slug TEXT NOT NULL UNIQUE,
         title TEXT NOT NULL,
@@ -46,25 +42,31 @@ export function ensureBlogSchema(): Promise<void> {
         service TEXT NOT NULL DEFAULT '전기안전 가이드',
         image_key TEXT,
         image_alt TEXT NOT NULL DEFAULT '',
-        status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+        status TEXT NOT NULL DEFAULT 'draft'
+          CONSTRAINT blog_posts_status_check CHECK (status IN ('draft', 'published')),
         seo_title TEXT NOT NULL,
         seo_description TEXT NOT NULL,
         ai_model TEXT,
-        published_at TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )`),
-      db.prepare(`CREATE INDEX IF NOT EXISTS idx_blog_posts_status_published_at
-        ON blog_posts(status, published_at)`),
-      db.prepare(`CREATE TABLE IF NOT EXISTS ai_generation_logs (
+        published_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_blog_posts_status_published_at
+      ON blog_posts(status, published_at)
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS ai_generation_logs (
         id TEXT PRIMARY KEY NOT NULL,
         user_id TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      )`),
-      db.prepare(`CREATE INDEX IF NOT EXISTS idx_ai_generation_logs_user_created_at
-        ON ai_generation_logs(user_id, created_at)`),
-    ]);
-    await db.prepare("PRAGMA optimize").run();
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_ai_generation_logs_user_created_at
+      ON ai_generation_logs(user_id, created_at)
+    `;
   })().catch((error) => {
     schemaReady = null;
     throw error;
@@ -73,90 +75,85 @@ export function ensureBlogSchema(): Promise<void> {
   return schemaReady;
 }
 
-function rowToPost(row: Record<string, unknown>): BlogRecord {
+type BlogRow = typeof blogPosts.$inferSelect;
+
+function rowToPost(row: BlogRow): BlogRecord {
   return {
-    id: String(row.id),
-    slug: String(row.slug),
-    title: String(row.title),
-    excerpt: String(row.excerpt),
-    content: String(row.content),
-    city: String(row.city),
-    service: String(row.service),
-    imageKey: row.image_key ? String(row.image_key) : null,
-    imageAlt: String(row.image_alt ?? ""),
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    excerpt: row.excerpt,
+    content: row.content,
+    city: row.city,
+    service: row.service,
+    imageKey: row.imageKey,
+    imageAlt: row.imageAlt,
     status: row.status === "published" ? "published" : "draft",
-    seoTitle: String(row.seo_title),
-    seoDescription: String(row.seo_description),
-    aiModel: row.ai_model ? String(row.ai_model) : null,
-    publishedAt: row.published_at ? String(row.published_at) : null,
-    createdAt: String(row.created_at),
-    updatedAt: String(row.updated_at),
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
+    aiModel: row.aiModel,
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
 export async function listPublishedBlogPosts(): Promise<BlogRecord[]> {
-  const db = database();
-  if (!db) return [];
+  if (!hasDatabaseConfiguration()) return [];
   await ensureBlogSchema();
-  const result = await db
-    .prepare(
-      `SELECT * FROM blog_posts
-       WHERE status = 'published'
-       ORDER BY published_at DESC, created_at DESC`,
-    )
-    .all();
-  return (result.results ?? []).map((row) =>
-    rowToPost(row as Record<string, unknown>),
-  );
+  const rows = await getDb()
+    .select()
+    .from(blogPosts)
+    .where(eq(blogPosts.status, "published"))
+    .orderBy(desc(blogPosts.publishedAt), desc(blogPosts.createdAt));
+  return rows.map(rowToPost);
 }
 
 export async function listAllBlogPosts(): Promise<BlogRecord[]> {
-  const db = database();
-  if (!db) return [];
+  if (!hasDatabaseConfiguration()) return [];
   await ensureBlogSchema();
-  const result = await db
-    .prepare("SELECT * FROM blog_posts ORDER BY updated_at DESC")
-    .all();
-  return (result.results ?? []).map((row) =>
-    rowToPost(row as Record<string, unknown>),
-  );
+  const rows = await getDb()
+    .select()
+    .from(blogPosts)
+    .orderBy(desc(blogPosts.updatedAt));
+  return rows.map(rowToPost);
 }
 
 export async function findBlogPostBySlug(
   slug: string,
 ): Promise<BlogRecord | null> {
-  const db = database();
-  if (!db) return null;
+  if (!hasDatabaseConfiguration()) return null;
   await ensureBlogSchema();
-  const row = await db
-    .prepare(
-      "SELECT * FROM blog_posts WHERE slug = ? AND status = 'published' LIMIT 1",
-    )
-    .bind(slug)
-    .first();
-  return row ? rowToPost(row as Record<string, unknown>) : null;
+  const rows = await getDb()
+    .select()
+    .from(blogPosts)
+    .where(and(eq(blogPosts.slug, slug), eq(blogPosts.status, "published")))
+    .limit(1);
+  return rows[0] ? rowToPost(rows[0]) : null;
 }
 
-export async function findAnyBlogPostBySlug(slug: string): Promise<BlogRecord | null> {
-  const db = database();
-  if (!db) return null;
+export async function findAnyBlogPostBySlug(
+  slug: string,
+): Promise<BlogRecord | null> {
+  if (!hasDatabaseConfiguration()) return null;
   await ensureBlogSchema();
-  const row = await db
-    .prepare("SELECT * FROM blog_posts WHERE slug = ? LIMIT 1")
-    .bind(slug)
-    .first();
-  return row ? rowToPost(row as Record<string, unknown>) : null;
+  const rows = await getDb()
+    .select()
+    .from(blogPosts)
+    .where(eq(blogPosts.slug, slug))
+    .limit(1);
+  return rows[0] ? rowToPost(rows[0]) : null;
 }
 
 export async function findBlogPostById(id: string): Promise<BlogRecord | null> {
-  const db = database();
-  if (!db) return null;
+  if (!hasDatabaseConfiguration()) return null;
   await ensureBlogSchema();
-  const row = await db
-    .prepare("SELECT * FROM blog_posts WHERE id = ? LIMIT 1")
-    .bind(id)
-    .first();
-  return row ? rowToPost(row as Record<string, unknown>) : null;
+  const rows = await getDb()
+    .select()
+    .from(blogPosts)
+    .where(eq(blogPosts.id, id))
+    .limit(1);
+  return rows[0] ? rowToPost(rows[0]) : null;
 }
 
 export type NewBlogPost = Omit<
@@ -165,39 +162,30 @@ export type NewBlogPost = Omit<
 > & { status?: BlogStatus };
 
 export async function createBlogPost(input: NewBlogPost): Promise<string> {
-  const db = database();
-  if (!db) throw new Error("블로그 데이터베이스가 연결되지 않았습니다.");
+  const db = getDb();
   await ensureBlogSchema();
   const id = crypto.randomUUID();
-  const now = new Date().toISOString();
+  const now = new Date();
   const status = input.status ?? "draft";
-  const publishedAt = status === "published" ? now : null;
-  await db
-    .prepare(
-      `INSERT INTO blog_posts (
-        id, slug, title, excerpt, content, city, service, image_key, image_alt,
-        status, seo_title, seo_description, ai_model, published_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      id,
-      input.slug,
-      input.title,
-      input.excerpt,
-      input.content,
-      input.city,
-      input.service,
-      input.imageKey,
-      input.imageAlt,
-      status,
-      input.seoTitle,
-      input.seoDescription,
-      input.aiModel,
-      publishedAt,
-      now,
-      now,
-    )
-    .run();
+
+  await db.insert(blogPosts).values({
+    id,
+    slug: input.slug,
+    title: input.title,
+    excerpt: input.excerpt,
+    content: input.content,
+    city: input.city,
+    service: input.service,
+    imageKey: input.imageKey,
+    imageAlt: input.imageAlt,
+    status,
+    seoTitle: input.seoTitle,
+    seoDescription: input.seoDescription,
+    aiModel: input.aiModel,
+    publishedAt: status === "published" ? now : null,
+    createdAt: now,
+    updatedAt: now,
+  });
   return id;
 }
 
@@ -216,84 +204,92 @@ export async function updateBlogPost(
     | "seoDescription"
   >,
 ): Promise<void> {
-  const db = database();
-  if (!db) throw new Error("블로그 데이터베이스가 연결되지 않았습니다.");
+  const db = getDb();
   await ensureBlogSchema();
   await db
-    .prepare(
-      `UPDATE blog_posts SET
-        slug = ?, title = ?, excerpt = ?, content = ?, city = ?, service = ?,
-        image_alt = ?, seo_title = ?, seo_description = ?, updated_at = ?
-       WHERE id = ?`,
-    )
-    .bind(
-      input.slug,
-      input.title,
-      input.excerpt,
-      input.content,
-      input.city,
-      input.service,
-      input.imageAlt,
-      input.seoTitle,
-      input.seoDescription,
-      new Date().toISOString(),
-      id,
-    )
-    .run();
+    .update(blogPosts)
+    .set({
+      slug: input.slug,
+      title: input.title,
+      excerpt: input.excerpt,
+      content: input.content,
+      city: input.city,
+      service: input.service,
+      imageAlt: input.imageAlt,
+      seoTitle: input.seoTitle,
+      seoDescription: input.seoDescription,
+      updatedAt: new Date(),
+    })
+    .where(eq(blogPosts.id, id));
 }
 
 export async function publishBlogPost(id: string): Promise<void> {
-  const db = database();
-  if (!db) throw new Error("블로그 데이터베이스가 연결되지 않았습니다.");
+  const db = getDb();
   await ensureBlogSchema();
-  const now = new Date().toISOString();
+  const now = new Date();
   await db
-    .prepare(
-      `UPDATE blog_posts
-       SET status = 'published', published_at = COALESCE(published_at, ?), updated_at = ?
-       WHERE id = ?`,
-    )
-    .bind(now, now, id)
-    .run();
+    .update(blogPosts)
+    .set({
+      status: "published",
+      publishedAt: drizzleSql<Date>`COALESCE(${blogPosts.publishedAt}, ${now})`,
+      updatedAt: now,
+    })
+    .where(eq(blogPosts.id, id));
 }
 
 export async function unpublishBlogPost(id: string): Promise<void> {
-  const db = database();
-  if (!db) throw new Error("블로그 데이터베이스가 연결되지 않았습니다.");
+  const db = getDb();
   await ensureBlogSchema();
   await db
-    .prepare(
-      `UPDATE blog_posts
-       SET status = 'draft', published_at = NULL, updated_at = ?
-       WHERE id = ?`,
-    )
-    .bind(new Date().toISOString(), id)
-    .run();
+    .update(blogPosts)
+    .set({ status: "draft", publishedAt: null, updatedAt: new Date() })
+    .where(eq(blogPosts.id, id));
 }
 
-export async function claimAiGenerationSlot(
+export async function claimRateLimitSlot(
+  scopeKey: string,
+  limit: number,
+  windowMs: number,
+): Promise<boolean> {
+  await ensureBlogSchema();
+
+  const sql = getSql();
+  const id = crypto.randomUUID();
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - windowMs);
+  const cleanupCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // The per-user advisory lock keeps the count-and-insert decision atomic even
+  // when several Vercel Functions process AI requests at the same time.
+  const result = await sql`
+    WITH locked AS MATERIALIZED (
+      SELECT
+        ${scopeKey}::text AS user_id,
+        pg_advisory_xact_lock(hashtextextended(${scopeKey}, 0)) AS lock_acquired
+    ),
+    inserted AS (
+      INSERT INTO ai_generation_logs (id, user_id, created_at)
+      SELECT ${id}, locked.user_id, ${now}
+      FROM locked
+      WHERE (
+        SELECT COUNT(*)
+        FROM ai_generation_logs
+        WHERE user_id = locked.user_id AND created_at >= ${cutoff}
+      ) < ${limit}
+      RETURNING id
+    ),
+    cleaned AS (
+      DELETE FROM ai_generation_logs WHERE created_at < ${cleanupCutoff}
+    )
+    SELECT EXISTS(SELECT 1 FROM inserted) AS claimed
+  `;
+
+  return result[0]?.claimed === true;
+}
+
+export function claimAiGenerationSlot(
   userId: string,
   limitPerHour = 12,
 ): Promise<boolean> {
-  const db = database();
-  if (!db) throw new Error("블로그 데이터베이스가 연결되지 않았습니다.");
-  await ensureBlogSchema();
-
-  const now = new Date();
-  const cutoff = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-  const cleanupCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  const result = await db
-    .prepare("SELECT COUNT(*) AS count FROM ai_generation_logs WHERE user_id = ? AND created_at >= ?")
-    .bind(userId, cutoff)
-    .first<{ count: number | string }>();
-
-  if (Number(result?.count ?? 0) >= limitPerHour) return false;
-
-  await db.batch([
-    db.prepare("INSERT INTO ai_generation_logs (id, user_id, created_at) VALUES (?, ?, ?)")
-      .bind(crypto.randomUUID(), userId, now.toISOString()),
-    db.prepare("DELETE FROM ai_generation_logs WHERE created_at < ?")
-      .bind(cleanupCutoff),
-  ]);
-  return true;
+  return claimRateLimitSlot(`ai-generation:${userId}`, limitPerHour, 60 * 60 * 1000);
 }

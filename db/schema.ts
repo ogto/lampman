@@ -1,6 +1,7 @@
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
-export const blogPosts = sqliteTable(
+export const blogPosts = pgTable(
   "blog_posts",
   {
     id: text("id").primaryKey(),
@@ -18,11 +19,19 @@ export const blogPosts = sqliteTable(
     seoTitle: text("seo_title").notNull(),
     seoDescription: text("seo_description").notNull(),
     aiModel: text("ai_model"),
-    publishedAt: text("published_at"),
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
+    check(
+      "blog_posts_status_check",
+      sql`${table.status} IN ('draft', 'published')`,
+    ),
     index("idx_blog_posts_status_published_at").on(
       table.status,
       table.publishedAt,
@@ -30,12 +39,14 @@ export const blogPosts = sqliteTable(
   ],
 );
 
-export const aiGenerationLogs = sqliteTable(
+export const aiGenerationLogs = pgTable(
   "ai_generation_logs",
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
-    createdAt: text("created_at").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     index("idx_ai_generation_logs_user_created_at").on(

@@ -3,6 +3,7 @@ import {
   findBlogPostBySlug,
   listPublishedBlogPosts,
 } from "@/db/blog";
+import { mediaUrl } from "@/lib/media";
 import { seedPosts } from "@/lib/seed-posts";
 
 export async function getPublishedPosts(): Promise<BlogRecord[]> {
@@ -35,7 +36,5 @@ export async function getPublishedPost(
 }
 
 export function postImageUrl(post: BlogRecord): string {
-  if (!post.imageKey) return "/images/breaker-diagnosis.png";
-  if (post.imageKey.startsWith("/")) return post.imageKey;
-  return `/media/${post.imageKey}`;
+  return mediaUrl(post.imageKey);
 }

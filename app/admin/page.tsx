@@ -15,7 +15,25 @@ export default async function AdminPage() {
       <section className="admin-shell">
         <header className="admin-header">
           <div><p>LAMPMAN CONTENT STUDIO</p><h1>사진 한 장에서<br />검색되는 기록으로.</h1></div>
-          <div className="admin-user"><span>{user.displayName}</span><Link href="/">사이트 보기 ↗</Link></div>
+          <div className="admin-user">
+            <span>{user.displayName}</span>
+            <Link href="/">사이트 보기 ↗</Link>
+            <form action="/api/admin/logout" method="post">
+              <button
+                type="submit"
+                style={{
+                  padding: "10px 14px",
+                  border: "1px solid var(--line)",
+                  background: "transparent",
+                  color: "inherit",
+                  font: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                로그아웃
+              </button>
+            </form>
+          </div>
         </header>
 
         <div className="admin-stats">

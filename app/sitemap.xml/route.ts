@@ -1,11 +1,12 @@
 import { getPublishedPosts } from "@/lib/posts";
+import { configuredOrigin } from "@/lib/url";
 
 function escapeXml(value: string): string {
   return value.replace(/[<>&'\"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '\"': "&quot;" })[char] ?? char);
 }
 
-export async function GET(request: Request) {
-  const origin = new URL(request.url).origin;
+export async function GET() {
+  const origin = configuredOrigin();
   const posts = await getPublishedPosts();
   const staticPaths = ["", "/daejeon", "/daejeon/electrical-repair", "/daejeon/electrical-construction", "/cheongju", "/cheongju/electrical-repair", "/cheongju/electrical-construction", "/blog"];
   const urls = [

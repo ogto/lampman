@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { BlogRecord } from "@/db/blog";
+import { bypassImageOptimization } from "@/lib/media";
 import { postImageUrl } from "@/lib/posts";
 
 export function PostCard({ post, featured = false }: { post: BlogRecord; featured?: boolean }) {
@@ -18,7 +19,7 @@ export function PostCard({ post, featured = false }: { post: BlogRecord; feature
           src={imageUrl}
           alt={post.imageAlt}
           fill
-          unoptimized={imageUrl.startsWith("/media/")}
+          unoptimized={bypassImageOptimization(imageUrl)}
           sizes={featured ? "(max-width: 800px) 100vw, 58vw" : "(max-width: 800px) 100vw, 33vw"}
         />
         <span className="post-arrow" aria-hidden="true">↗</span>

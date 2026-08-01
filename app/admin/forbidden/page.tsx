@@ -5,11 +5,11 @@ export default function AdminForbiddenPage() {
     <main className="admin-page">
       <section className="admin-shell">
         <div className="admin-empty">
-          이 계정에는 램프맨 콘텐츠 스튜디오 권한이 없습니다.
+          관리자 로그인이 필요합니다.
           <br />
-          운영자는 사이트 환경변수 <strong>ADMIN_EMAILS</strong>에 허용할 이메일을 등록해야 합니다.
+          등록된 관리자 비밀번호로 콘텐츠 스튜디오에 로그인해 주세요.
           <br />
-          <Link href="/">사이트로 돌아가기</Link>
+          <Link href="/admin/login">관리자 로그인</Link>
         </div>
       </section>
     </main>

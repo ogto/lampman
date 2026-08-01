@@ -1,20 +1,13 @@
-import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isLampmanAdmin } from "@/lib/admin-auth";
+import { del, put } from "@vercel/blob";
+import sharp from "sharp";
+import { getLampmanAdmin } from "@/lib/admin-auth";
 import { claimAiGenerationSlot, createBlogPost } from "@/db/blog";
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-type ImagesBinding = {
-  input(stream: ReadableStream): {
-    transform(options: Record<string, unknown>): {
-      output(options: { format: string; quality: number }): Promise<{ response(): Response }>;
-    };
-  };
-};
-
-type MediaEnv = { MEDIA?: R2Bucket; IMAGES?: ImagesBinding };
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function hasExpectedSignature(bytes: Uint8Array, type: string): boolean {
   if (type === "image/jpeg") {
@@ -32,14 +25,21 @@ function hasExpectedSignature(bytes: Uint8Array, type: string): boolean {
   return false;
 }
 
-async function sanitizeImage(images: ImagesBinding, source: ArrayBuffer): Promise<ArrayBuffer> {
-  const transformed = await images
-    .input(new Blob([new Uint8Array(source)]).stream())
-    .transform({ width: 2000, height: 2000, fit: "scale-down" })
-    .output({ format: "image/webp", quality: 85 });
-  const response = transformed.response();
-  if (!response.ok) throw new Error(`image transform failed: ${response.status}`);
-  const bytes = await response.arrayBuffer();
+async function sanitizeImage(source: ArrayBuffer): Promise<Buffer> {
+  const bytes = await sharp(Buffer.from(source), {
+    failOn: "error",
+    limitInputPixels: 40_000_000,
+    sequentialRead: true,
+  })
+    .rotate()
+    .resize({
+      width: 2000,
+      height: 2000,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 85 })
+    .toBuffer();
   if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) {
     throw new Error("sanitized image has an invalid size");
   }
@@ -78,14 +78,18 @@ function outputText(payload: Record<string, unknown>): string | null {
 }
 
 export async function POST(request: Request) {
-  const user = await getChatGPTUser();
+  const user = await getLampmanAdmin();
   if (!user) return Response.json({ error: "관리자 로그인이 필요합니다." }, { status: 401 });
-  if (!isLampmanAdmin(user)) return Response.json({ error: "관리자 권한이 없습니다." }, { status: 403 });
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  const gatewayToken =
+    process.env.AI_GATEWAY_API_KEY ??
+    request.headers.get("x-vercel-oidc-token") ??
+    process.env.VERCEL_OIDC_TOKEN;
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const apiToken = gatewayToken ?? openAiKey;
+  if (!apiToken) {
     return Response.json(
-      { error: "OPENAI_API_KEY를 사이트 환경 변수에 연결하면 AI 초안 기능이 활성화됩니다." },
+      { error: "AI 연결 정보가 준비되지 않았습니다." },
       { status: 503 },
     );
   }
@@ -94,7 +98,7 @@ export async function POST(request: Request) {
   const image = formData.get("image");
   if (!(image instanceof File)) return Response.json({ error: "현장 사진을 선택해주세요." }, { status: 400 });
   if (!ALLOWED_TYPES.has(image.type)) return Response.json({ error: "JPG, PNG, WEBP 이미지만 사용할 수 있습니다." }, { status: 400 });
-  if (image.size > MAX_IMAGE_BYTES) return Response.json({ error: "이미지는 10MB 이하로 올려주세요." }, { status: 400 });
+  if (image.size > MAX_IMAGE_BYTES) return Response.json({ error: "업로드용 이미지가 너무 큽니다. 다시 선택해주세요." }, { status: 400 });
 
   const city = String(formData.get("city") ?? "대전·청주").slice(0, 20);
   const service = String(formData.get("service") ?? "자동 분석").slice(0, 30);
@@ -102,11 +106,6 @@ export async function POST(request: Request) {
   const bytes = await image.arrayBuffer();
   if (!hasExpectedSignature(new Uint8Array(bytes), image.type)) {
     return Response.json({ error: "파일 확장자와 실제 이미지 형식이 일치하지 않습니다." }, { status: 400 });
-  }
-
-  const bindings = env as unknown as MediaEnv;
-  if (!bindings.MEDIA || !bindings.IMAGES) {
-    return Response.json({ error: "이미지 처리 및 저장소가 연결되지 않았습니다." }, { status: 503 });
   }
 
   let hasQuota: boolean;
@@ -120,16 +119,24 @@ export async function POST(request: Request) {
     return Response.json({ error: "AI 초안은 계정당 한 시간에 12회까지 만들 수 있습니다." }, { status: 429 });
   }
 
-  let safeImage: ArrayBuffer;
+  let safeImage: Buffer;
   try {
-    safeImage = await sanitizeImage(bindings.IMAGES, bytes);
+    safeImage = await sanitizeImage(bytes);
   } catch (error) {
     console.error("Uploaded image sanitization failed", error);
     return Response.json({ error: "이미지를 안전하게 처리하지 못했습니다. 다른 사진으로 시도해주세요." }, { status: 422 });
   }
 
-  const base64 = Buffer.from(safeImage).toString("base64");
-  const model = process.env.OPENAI_MODEL ?? "gpt-5.6";
+  const base64 = safeImage.toString("base64");
+  const requestedModel = process.env.AI_MODEL
+    ?? process.env.OPENAI_MODEL
+    ?? (gatewayToken ? "openai/gpt-5.6-terra" : "gpt-5.6");
+  const model = gatewayToken
+    ? (requestedModel.includes("/") ? requestedModel : `openai/${requestedModel}`)
+    : requestedModel.replace(/^openai\//, "");
+  const aiEndpoint = gatewayToken
+    ? "https://ai-gateway.vercel.sh/v1/responses"
+    : "https://api.openai.com/v1/responses";
 
   const prompt = `당신은 대전·청주 24시간 전기 서비스 브랜드 '램프맨'의 콘텐츠 에디터입니다.
 업로드된 현장 사진을 분석해 사람에게 실질적으로 도움이 되는 한국어 블로그 초안을 작성하세요.
@@ -167,9 +174,9 @@ export async function POST(request: Request) {
 
   let response: Response;
   try {
-    response = await fetch("https://api.openai.com/v1/responses", {
+    response = await fetch(aiEndpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         store: false,
@@ -204,12 +211,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "AI 초안 형식을 읽지 못했습니다." }, { status: 502 });
   }
 
-  const bucket = bindings.MEDIA;
-  const imageKey = `blog/${new Date().getUTCFullYear()}/${crypto.randomUUID()}.webp`;
+  const imagePath = `blog/${new Date().getUTCFullYear()}/${crypto.randomUUID()}.webp`;
+  let imageKey: string;
   try {
-    await bucket.put(imageKey, safeImage, {
-      httpMetadata: { contentType: "image/webp", cacheControl: "public, max-age=31536000, immutable" },
+    const blob = await put(imagePath, safeImage, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: "image/webp",
+      cacheControlMaxAge: 31_536_000,
     });
+    imageKey = blob.url;
   } catch (error) {
     console.error("Failed to store sanitized blog image", error);
     return Response.json({ error: "이미지 저장소에 연결하지 못했습니다." }, { status: 503 });
@@ -231,7 +242,7 @@ export async function POST(request: Request) {
       aiModel: model,
     });
   } catch (error) {
-    await bucket.delete(imageKey).catch((cleanupError) => {
+    await del(imageKey).catch((cleanupError) => {
       console.error("Failed to remove orphaned blog image", cleanupError);
     });
     console.error("Failed to save AI blog draft", error);

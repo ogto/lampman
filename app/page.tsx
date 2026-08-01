@@ -10,7 +10,7 @@ import { siteConfig } from "@/lib/site";
 import { getRequestOrigin } from "@/lib/url";
 
 export const metadata: Metadata = {
-  title: "대전·청주 24시간 전기수리·전기공사",
+  title: "대전·청주 24시간 전기수리·전기공사 | 램프맨",
   description:
     "대전·청주 365일 24시간 전기출동. 누전수리, 차단기, 정전, 분전반, 배선과 상가·주택 전기공사를 상담하세요.",
   alternates: { canonical: "/" },

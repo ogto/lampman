@@ -10,8 +10,8 @@ let server;
 
 before(async () => {
   const projectRoot = fileURLToPath(new URL("../", import.meta.url));
-  const cli = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
-  server = spawn(process.execPath, [cli, "preview", "--host", "127.0.0.1", "--port", String(port)], {
+  const cli = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
+  server = spawn(process.execPath, [cli, "start", "--hostname", "127.0.0.1", "--port", String(port)], {
     cwd: projectRoot,
     env: { ...process.env, NEXT_PUBLIC_SITE_URL: baseUrl },
     stdio: "ignore",
@@ -83,12 +83,12 @@ test("regional and blog hubs omit decorative English labels", async () => {
   }
 });
 
-test("serves source and optimized brand images", async () => {
+test("serves source and Next.js optimized brand images", async () => {
   const source = await fetch(`${baseUrl}/images/lampman-hero.png`);
   assert.equal(source.status, 200);
   assert.match(source.headers.get("content-type") ?? "", /^image\/png\b/i);
 
-  const optimized = await fetch(`${baseUrl}/_vinext/image?url=%2Fimages%2Flampman-hero.png&w=640&q=75`);
+  const optimized = await fetch(`${baseUrl}/_next/image?url=%2Fimages%2Flampman-hero.png&w=640&q=75`);
   assert.equal(optimized.status, 200);
   assert.match(optimized.headers.get("content-type") ?? "", /^image\//i);
 });

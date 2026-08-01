@@ -9,5 +9,5 @@ export async function getRequestOrigin(): Promise<string> {
 }
 
 export function configuredOrigin(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://lampman.example";
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://lampman.example").replace(/\/+$/, "");
 }

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ContactBand } from "@/app/_components/ContactBand";
 import { JsonLd } from "@/app/_components/JsonLd";
 import { MarkdownArticle } from "@/app/_components/MarkdownArticle";
+import { absoluteMediaUrl, bypassImageOptimization } from "@/lib/media";
 import { getPublishedPost, postImageUrl } from "@/lib/posts";
 import { seedPosts } from "@/lib/seed-posts";
 import { getRequestOrigin } from "@/lib/url";
@@ -34,6 +35,7 @@ export default async function BlogPostPage({ params }: Props) {
   const [post, origin] = await Promise.all([getPublishedPost(slug), getRequestOrigin()]);
   if (!post) notFound();
   const imageUrl = postImageUrl(post);
+  const absoluteImageUrl = absoluteMediaUrl(imageUrl, origin);
   const date = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(post.publishedAt ?? post.createdAt));
 
   return (
@@ -43,7 +45,7 @@ export default async function BlogPostPage({ params }: Props) {
         "@type": "Article",
         headline: post.title,
         description: post.excerpt,
-        image: `${origin}${postImageUrl(post)}`,
+        image: absoluteImageUrl,
         datePublished: post.publishedAt ?? post.createdAt,
         dateModified: post.updatedAt,
         author: { "@type": "Organization", name: "램프맨" },
@@ -59,7 +61,7 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
       </header>
       <div className="article-image shell">
-        <Image src={imageUrl} alt={post.imageAlt} fill priority unoptimized={imageUrl.startsWith("/media/")} sizes="(max-width: 1100px) 100vw, 1100px" />
+        <Image src={imageUrl} alt={post.imageAlt} fill priority unoptimized={bypassImageOptimization(imageUrl)} sizes="(max-width: 1100px) 100vw, 1100px" />
       </div>
       <article className="article-body shell">
         <aside><span>램프맨 전기안전 노트</span><p>대전·청주 24시간 전기출동 현장에서 필요한 기준을 정리합니다.</p><a href={siteConfig.phoneHref}>긴급전화 {siteConfig.phoneDisplay} ↗</a></aside>

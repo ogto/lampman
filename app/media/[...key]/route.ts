@@ -1,21 +1,45 @@
-import { env } from "cloudflare:workers";
+import { BlobNotFoundError, head } from "@vercel/blob";
 
-type MediaEnv = { MEDIA?: R2Bucket };
+export const runtime = "nodejs";
+
+function legacyPathname(segments: string[]): string | null {
+  if (
+    !segments.length
+    || segments.some((segment) => (
+      !segment
+      || segment === "."
+      || segment === ".."
+      || segment.includes("\\")
+      || segment.includes("\0")
+    ))
+  ) {
+    return null;
+  }
+  return segments.join("/");
+}
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ key: string[] }> },
 ) {
-  const bucket = (env as unknown as MediaEnv).MEDIA;
-  if (!bucket) return new Response("Not found", { status: 404 });
   const { key } = await params;
-  const object = await bucket.get(key.join("/"));
-  if (!object) return new Response("Not found", { status: 404 });
+  const pathname = legacyPathname(key);
+  if (!pathname) return new Response("Not found", { status: 404 });
 
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("etag", object.httpEtag);
-  headers.set("cache-control", headers.get("cache-control") ?? "public, max-age=31536000, immutable");
-  if (request.headers.get("if-none-match") === object.httpEtag) return new Response(null, { status: 304, headers });
-  return new Response(object.body, { headers });
+  try {
+    const blob = await head(pathname);
+    return new Response(null, {
+      status: 307,
+      headers: {
+        location: blob.url,
+        "cache-control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    });
+  } catch (error) {
+    if (error instanceof BlobNotFoundError) {
+      return new Response("Not found", { status: 404 });
+    }
+    console.error("Failed to resolve legacy media pathname", error);
+    return new Response("Media unavailable", { status: 503 });
+  }
 }

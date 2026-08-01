@@ -3,6 +3,60 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+const MAX_SOURCE_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_UPLOAD_IMAGE_BYTES = 3_800_000;
+const MAX_IMAGE_DIMENSION = 2000;
+
+function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => blob ? resolve(blob) : reject(new Error("이미지를 변환하지 못했습니다.")),
+      "image/webp",
+      quality,
+    );
+  });
+}
+
+async function prepareImageUpload(file: File): Promise<File> {
+  if (file.size > MAX_SOURCE_IMAGE_BYTES) {
+    throw new Error("원본 사진은 10MB 이하로 올려주세요.");
+  }
+  if (typeof createImageBitmap !== "function") {
+    if (file.size > MAX_UPLOAD_IMAGE_BYTES) {
+      throw new Error("이 브라우저에서는 큰 사진을 자동 최적화할 수 없습니다. 더 작은 사진을 선택해주세요.");
+    }
+    return file;
+  }
+
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  try {
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error("이미지를 변환하지 못했습니다.");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    let optimized: Blob | null = null;
+    for (const quality of [0.85, 0.72, 0.58]) {
+      optimized = await canvasToWebp(canvas, quality);
+      if (optimized.size <= MAX_UPLOAD_IMAGE_BYTES) break;
+    }
+    if (!optimized || optimized.size > MAX_UPLOAD_IMAGE_BYTES) {
+      throw new Error("사진 용량을 충분히 줄이지 못했습니다. 다른 사진을 선택해주세요.");
+    }
+
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "lampman-field";
+    return new File([optimized], `${baseName}.webp`, {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export function AdminComposer() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -17,6 +71,11 @@ export function AdminComposer() {
   }, []);
 
   function selectFile(nextFile: File | null) {
+    setMessage(null);
+    if (nextFile && nextFile.size > MAX_SOURCE_IMAGE_BYTES) {
+      setMessage("원본 사진은 10MB 이하로 올려주세요.");
+      nextFile = null;
+    }
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     const nextPreview = nextFile ? URL.createObjectURL(nextFile) : null;
     previewUrlRef.current = nextPreview;
@@ -30,9 +89,10 @@ export function AdminComposer() {
     setLoading(true);
     setMessage(null);
     const formData = new FormData(event.currentTarget);
-    formData.set("image", file);
 
     try {
+      const uploadFile = await prepareImageUpload(file);
+      formData.set("image", uploadFile);
       const response = await fetch("/api/admin/generate", {
         method: "POST",
         body: formData,
@@ -57,7 +117,7 @@ export function AdminComposer() {
           <span className="upload-placeholder">
             <b>＋</b>
             <strong>현장 사진 올리기</strong>
-            <small>JPG, PNG, WEBP · 최대 10MB</small>
+            <small>JPG, PNG, WEBP · 원본 최대 10MB · 자동 최적화</small>
           </span>
         )}
         <input
