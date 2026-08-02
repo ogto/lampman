@@ -18,7 +18,20 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const STAGING_PREFIX = "draft-uploads/";
 const PREPARED_PREFIX = "draft-prepared/";
 const FINAL_PREFIX = "blog/posts/";
-const AI_BILLING_URL = "https://vercel.com/ogtos-projects/~/ai?modal=add-credit-card";
+const AI_BILLING_URL = "https://vercel.com/ogtos-projects/~/ai?modal=top-up";
+const AI_GATEWAY_CHAT_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
+const GATEWAY_MAX_ATTEMPTS = 2;
+const RETRYABLE_GATEWAY_STATUSES = new Set([500, 502, 503, 504]);
+const DEFAULT_VISION_FALLBACK_MODELS = [
+  "alibaba/qwen3.7-flash",
+  "google/gemini-2.5-flash-lite",
+  "amazon/nova-lite",
+];
+const DEFAULT_WRITER_FALLBACK_MODELS = [
+  "alibaba/qwen3.7-flash",
+  "google/gemini-2.5-flash-lite",
+  "openai/gpt-5-nano",
+];
 
 type GenerateRequest = {
   city?: unknown;
@@ -48,6 +61,69 @@ const DRAFT_FIELDS = [
   "seoTitle",
   "seoDescription",
 ] as const;
+
+function fallbackModels(
+  configured: string | undefined,
+  primaryModel: string,
+  defaults: string[],
+): string[] {
+  const source = configured ?? defaults.join(",");
+  return [...new Set(source.split(/[\s,]+/).map((model) => model.trim()).filter(Boolean))]
+    .filter((model) => model !== primaryModel)
+    .slice(0, 4);
+}
+
+function gatewayProviderOptions(models: string[]) {
+  return models.length > 0
+    ? { providerOptions: { gateway: { models } } }
+    : {};
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function gatewayChatCompletion(
+  apiToken: string,
+  payload: Record<string, unknown>,
+  stage: "vision" | "writer",
+): Promise<Response> {
+  let lastResponse: Response | null = null;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= GATEWAY_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(AI_GATEWAY_CHAT_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(90_000),
+        body: JSON.stringify(payload),
+      });
+      lastResponse = response;
+
+      if (!RETRYABLE_GATEWAY_STATUSES.has(response.status) || attempt === GATEWAY_MAX_ATTEMPTS) {
+        return response;
+      }
+
+      console.warn(`AI ${stage} provider unavailable; retrying`, {
+        status: response.status,
+        attempt,
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt === GATEWAY_MAX_ATTEMPTS) throw error;
+      console.warn(`AI ${stage} request failed; retrying`, {
+        attempt,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    await wait(750 * attempt);
+  }
+
+  if (lastResponse) return lastResponse;
+  throw lastError instanceof Error ? lastError : new Error("AI_GATEWAY_REQUEST_FAILED");
+}
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -265,6 +341,13 @@ function upstreamErrorResponse(
       { code: "AI_RATE_LIMITED", preparedImages, sourceImages },
     );
   }
+  if (RETRYABLE_GATEWAY_STATUSES.has(response.status)) {
+    return jsonError(
+      "AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.",
+      503,
+      { code: "AI_TEMPORARILY_UNAVAILABLE", preparedImages, sourceImages },
+    );
+  }
   return jsonError(
     "AI가 초안을 만들지 못했습니다. 잠시 후 다시 시도해주세요.",
     502,
@@ -475,6 +558,16 @@ export async function POST(request: Request) {
     ?? "zai/glm-4.6v-flash";
   const writerModel = process.env.AI_WRITER_MODEL
     ?? "inclusionai/ling-3.0-flash-free";
+  const visionFallbackModels = fallbackModels(
+    process.env.AI_VISION_FALLBACK_MODELS,
+    visionModel,
+    DEFAULT_VISION_FALLBACK_MODELS,
+  );
+  const writerFallbackModels = fallbackModels(
+    process.env.AI_WRITER_FALLBACK_MODELS,
+    writerModel,
+    DEFAULT_WRITER_FALLBACK_MODELS,
+  );
   const openAiModel = (process.env.OPENAI_MODEL ?? "gpt-5.4").replace(/^openai\//, "");
 
   const prompt = `당신은 대전·청주 24시간 전기 서비스 브랜드 '램프맨'의 콘텐츠 에디터입니다.
@@ -535,29 +628,25 @@ JSON 객체 하나만 반환하세요. observations에는 사진 번호별 visib
 
     let visionResponse: Response;
     try {
-      visionResponse = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(90_000),
-        body: JSON.stringify({
-          model: visionModel,
-          store: false,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: visionPrompt },
-              ...imageDataUrls.map((url) => ({ type: "image_url", image_url: { url } })),
-            ],
-          }],
-          max_tokens: 2400,
-        }),
-      });
+      visionResponse = await gatewayChatCompletion(apiToken, {
+        model: visionModel,
+        store: false,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: visionPrompt },
+            ...imageDataUrls.map((url) => ({ type: "image_url", image_url: { url } })),
+          ],
+        }],
+        max_tokens: 2400,
+        ...gatewayProviderOptions(visionFallbackModels),
+      }, "vision");
     } catch (error) {
       console.error("AI vision request failed", error);
       await releaseReservation(reservationId, user.userId);
       return jsonError(
         "AI 사진 분석 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.",
-        502,
+        503,
         { code: "AI_CONNECTION_FAILED", preparedImages, sourceImages },
       );
     }
@@ -585,6 +674,13 @@ JSON 객체 하나만 반환하세요. observations에는 사진 번호별 visib
         { code: "AI_INVALID_RESPONSE", preparedImages, sourceImages },
       );
     }
+    const resolvedVisionModel = typeof visionPayload.model === "string"
+      ? visionPayload.model
+      : visionModel;
+    console.info("AI vision analysis completed", {
+      requestedModel: visionModel,
+      resolvedModel: resolvedVisionModel,
+    });
     const visionText = chatCompletionText(visionPayload);
     if (!visionText) {
       await releaseReservation(reservationId, user.userId);
@@ -621,23 +717,19 @@ slug, title, excerpt, content, city, service, imageAlt, seoTitle, seoDescription
 
     let writerResponse: Response;
     try {
-      writerResponse = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(90_000),
-        body: JSON.stringify({
-          model: writerModel,
-          store: false,
-          messages: [{ role: "user", content: writerPrompt }],
-          max_tokens: 6000,
-        }),
-      });
+      writerResponse = await gatewayChatCompletion(apiToken, {
+        model: writerModel,
+        store: false,
+        messages: [{ role: "user", content: writerPrompt }],
+        max_tokens: 6000,
+        ...gatewayProviderOptions(writerFallbackModels),
+      }, "writer");
     } catch (error) {
       console.error("AI writer request failed", error);
       await releaseReservation(reservationId, user.userId);
       return jsonError(
         "AI 초안 작성 서비스에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.",
-        502,
+        503,
         { code: "AI_CONNECTION_FAILED", preparedImages, sourceImages },
       );
     }
@@ -665,6 +757,13 @@ slug, title, excerpt, content, city, service, imageAlt, seoTitle, seoDescription
         { code: "AI_INVALID_RESPONSE", preparedImages, sourceImages },
       );
     }
+    const resolvedWriterModel = typeof writerPayload.model === "string"
+      ? writerPayload.model
+      : writerModel;
+    console.info("AI draft generation completed", {
+      requestedModel: writerModel,
+      resolvedModel: resolvedWriterModel,
+    });
     const writerText = chatCompletionText(writerPayload);
     const parsedDraft = writerText ? parseDraft(writerText) : null;
     if (!parsedDraft) {
@@ -676,7 +775,7 @@ slug, title, excerpt, content, city, service, imageAlt, seoTitle, seoDescription
       );
     }
     draft = parsedDraft;
-    aiModel = `${visionModel} → ${writerModel}`;
+    aiModel = `${resolvedVisionModel} → ${resolvedWriterModel}`;
   } else {
     let response: Response;
     try {

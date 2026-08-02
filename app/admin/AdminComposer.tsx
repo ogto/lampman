@@ -413,7 +413,7 @@ export function AdminComposer() {
         </div>
         <div className="composer-status" aria-live="polite">
           {message && <p className="admin-error" role="alert">{message}</p>}
-          {actionUrl && <a className="admin-error-action" href={actionUrl} target="_blank" rel="noreferrer">Vercel AI 사용 설정 열기 ↗</a>}
+          {actionUrl && <a className="admin-error-action" href={actionUrl} target="_blank" rel="noreferrer">Vercel AI 크레딧 충전하기 ↗</a>}
         </div>
         <button className="admin-generate" type="submit" disabled={images.length === 0 || loading || preparing}>
           {preparing
