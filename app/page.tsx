@@ -6,7 +6,7 @@ import { HeroScene } from "./_components/HeroScene";
 import { JsonLd } from "./_components/JsonLd";
 import { PostCard } from "./_components/PostCard";
 import { getPublishedPosts } from "@/lib/posts";
-import { siteConfig } from "@/lib/site";
+import { siteAssets, siteConfig } from "@/lib/site";
 import { getRequestOrigin } from "@/lib/url";
 
 export const metadata: Metadata = {
@@ -14,6 +14,27 @@ export const metadata: Metadata = {
   description:
     "대전·청주 365일 24시간 전기출동. 누전수리, 차단기, 정전, 분전반, 배선과 상가·주택 전기공사를 상담하세요.",
   alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: "램프맨",
+    title: "램프맨 | 대전·청주 24시간 전기출동",
+    description: "대전·청주 전기수리 현장에서 분전반을 점검하는 램프맨입니다.",
+    url: "/",
+    images: [{
+      url: siteAssets.homepageImage,
+      width: 1200,
+      height: 1200,
+      alt: "아파트 분전반을 점검하는 램프맨 전기 기술자",
+      type: "image/jpeg",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "램프맨 | 대전·청주 24시간 전기출동",
+    description: "대전·청주 전기수리 현장에서 분전반을 점검하는 램프맨입니다.",
+    images: [siteAssets.homepageImage],
+  },
 };
 
 const services = [
@@ -61,6 +82,8 @@ export default async function Home() {
     "@type": ["Electrician", "LocalBusiness"],
     name: siteConfig.legalName,
     url: origin,
+    logo: `${origin}${siteAssets.icon}`,
+    image: `${origin}${siteAssets.homepageImage}`,
     description: "대전·청주 365일 24시간 전기수리·전기공사 서비스",
     openingHours: "Mo-Su 00:00-23:59",
     areaServed: [

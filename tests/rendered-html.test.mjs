@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
+import sharp from "sharp";
 
 const port = 3217;
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -53,7 +54,29 @@ test("server-renders the Lampman SEO homepage", async () => {
   assert.doesNotMatch(html, /급할 때 가장<br/);
   assert.doesNotMatch(html, /지금 전기 문제를<br/);
   assert.match(html, /application\/ld\+json/);
-  assert.match(html, /og\.png/);
+  const homepageImageTag = html.match(/<meta(?=[^>]*property="og:image")[^>]*>/i)?.[0] ?? "";
+  const homepageImageUrl = homepageImageTag.match(/content="([^"]+)"/i)?.[1] ?? "";
+  assert.match(homepageImageUrl, /^https?:\/\/[^/]+\/images\/lampman-search-thumbnail\.jpg$/i);
+  assert.match(html, /<meta(?=[^>]*property="og:image:width")(?=[^>]*content="1200")[^>]*>/i);
+  assert.match(html, /<meta(?=[^>]*property="og:image:height")(?=[^>]*content="1200")[^>]*>/i);
+  assert.match(html, /<meta(?=[^>]*property="og:image:type")(?=[^>]*content="image\/jpeg")[^>]*>/i);
+  const twitterImageTag = html.match(/<meta(?=[^>]*name="twitter:image")[^>]*>/i)?.[0] ?? "";
+  assert.ok(twitterImageTag.includes(`content="${homepageImageUrl}"`));
+  const iconTag = html.match(/<link(?=[^>]*rel="icon")[^>]*>/i)?.[0] ?? "";
+  const iconUrl = iconTag.match(/href="([^"]+)"/i)?.[1] ?? "";
+  assert.match(iconUrl, /^https?:\/\/[^/]+\/lampman-icon\.png$/i);
+  assert.ok(iconTag.includes('type="image/png"'));
+  assert.ok(iconTag.includes('sizes="512x512"'));
+  assert.doesNotMatch(html, /<meta(?=[^>]*property="og:image")(?=[^>]*content="[^"]*\/og\.png")[^>]*>/i);
+  const schemas = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gis)]
+    .map((match) => JSON.parse(match[1]));
+  const business = schemas.find((schema) => {
+    const types = Array.isArray(schema["@type"]) ? schema["@type"] : [schema["@type"]];
+    return types.includes("LocalBusiness") || types.includes("Organization");
+  });
+  assert.ok(business, "homepage should expose a business identity schema");
+  assert.equal(business.logo, iconUrl);
+  assert.equal(business.image, homepageImageUrl);
   assert.doesNotMatch(html, decorativeEnglish);
   assert.doesNotMatch(html, /hero-image-light|hero-image-night/);
   assert.doesNotMatch(html, /사업자등록번호|실제 사업자·연락처/);
@@ -83,10 +106,28 @@ test("regional and blog hubs omit decorative English labels", async () => {
   }
 });
 
-test("serves source and Next.js optimized brand images", async () => {
+test("serves source, search thumbnail, favicon, and optimized brand images", async () => {
   const source = await fetch(`${baseUrl}/images/lampman-hero.png`);
   assert.equal(source.status, 200);
   assert.match(source.headers.get("content-type") ?? "", /^image\/png\b/i);
+
+  const thumbnail = await fetch(`${baseUrl}/images/lampman-search-thumbnail.jpg`);
+  assert.equal(thumbnail.status, 200);
+  assert.match(thumbnail.headers.get("content-type") ?? "", /^image\/jpeg\b/i);
+  const thumbnailBytes = Buffer.from(await thumbnail.arrayBuffer());
+  assert.ok(thumbnailBytes.byteLength > 5_000);
+  const thumbnailMetadata = await sharp(thumbnailBytes).metadata();
+  assert.equal(thumbnailMetadata.width, 1200);
+  assert.equal(thumbnailMetadata.height, 1200);
+  assert.equal(thumbnailMetadata.format, "jpeg");
+
+  const icon = await fetch(`${baseUrl}/lampman-icon.png`);
+  assert.equal(icon.status, 200);
+  assert.match(icon.headers.get("content-type") ?? "", /^image\/png\b/i);
+  const iconMetadata = await sharp(Buffer.from(await icon.arrayBuffer())).metadata();
+  assert.equal(iconMetadata.width, 512);
+  assert.equal(iconMetadata.height, 512);
+  assert.equal(iconMetadata.format, "png");
 
   const optimized = await fetch(`${baseUrl}/_next/image?url=%2Fimages%2Flampman-hero.png&w=640&q=75`);
   assert.equal(optimized.status, 200);

@@ -1,6 +1,12 @@
 const phoneDigits = (process.env.NEXT_PUBLIC_PHONE ?? "").replace(/\D/g, "") || "01080715580";
 const phoneE164 = phoneDigits.startsWith("0") ? `+82${phoneDigits.slice(1)}` : `+${phoneDigits}`;
 
+export const siteAssets = {
+  defaultOpenGraphImage: "/og.png",
+  homepageImage: "/images/lampman-search-thumbnail.jpg",
+  icon: "/lampman-icon.png",
+} as const;
+
 export const siteConfig = {
   name: "램프맨",
   englishName: "LAMPMAN",

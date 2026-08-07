@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SiteFooter } from "./_components/SiteFooter";
 import { SiteHeader } from "./_components/SiteHeader";
+import { siteAssets } from "@/lib/site";
 import { getRequestOrigin } from "@/lib/url";
 import "./globals.css";
 
@@ -29,6 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
     creator: "램프맨",
     publisher: "램프맨",
     formatDetection: { telephone: false },
+    icons: {
+      icon: [{ url: new URL(siteAssets.icon, origin), type: "image/png", sizes: "512x512" }],
+    },
     openGraph: {
       type: "website",
       locale: "ko_KR",
@@ -36,13 +40,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "램프맨 | 대전·청주 24시간 전기출동",
       description: "불이 꺼진 순간, 램프맨은 켜집니다.",
       url: origin,
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: "램프맨 대전·청주 24시간 전기출동" }],
+      images: [{ url: siteAssets.defaultOpenGraphImage, width: 1731, height: 909, alt: "램프맨 대전·청주 24시간 전기출동" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "램프맨 | 대전·청주 24시간 전기출동",
       description: "불이 꺼진 순간, 램프맨은 켜집니다.",
-      images: ["/og.png"],
+      images: [siteAssets.defaultOpenGraphImage],
     },
     verification: {
       ...(googleVerification ? { google: googleVerification } : {}),
