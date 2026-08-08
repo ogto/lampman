@@ -5,7 +5,7 @@ import { siteConfig } from "@/lib/site";
 const navigation = [
   { href: "/daejeon", label: "대전 출동" },
   { href: "/cheongju", label: "청주 출동" },
-  { href: "/blog", label: "전기안전 노트" },
+  { href: "/blog", label: "블로그" },
 ];
 
 export function SiteHeader() {

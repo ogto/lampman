@@ -56,7 +56,7 @@ export default async function BlogPostPage({ params }: Props) {
       }} />
       <header className="article-header">
         <div className="shell article-header-inner">
-          <div className="breadcrumbs"><Link href="/">홈</Link><span>/</span><Link href="/blog">전기안전 노트</Link></div>
+          <div className="breadcrumbs"><Link href="/">홈</Link><span>/</span><Link href="/blog">블로그</Link></div>
           <div className="article-meta"><span>{post.city}</span><span>{post.service}</span><time>{date}</time></div>
           <h1>{post.title}</h1>
           <p>{post.excerpt}</p>
@@ -83,7 +83,7 @@ export default async function BlogPostPage({ params }: Props) {
         </section>
       )}
       <article className="article-body shell">
-        <aside><span>램프맨 전기안전 노트</span><p>대전·청주 24시간 전기출동 현장에서 필요한 기준을 정리합니다.</p><a href={siteConfig.phoneHref}>긴급전화 {siteConfig.phoneDisplay} ↗</a></aside>
+        <aside><span>램프맨 블로그</span><p>대전·청주 24시간 전기출동 현장에서 필요한 기준을 정리합니다.</p><a href={siteConfig.phoneHref}>긴급전화 {siteConfig.phoneDisplay} ↗</a></aside>
         <MarkdownArticle content={post.content} />
       </article>
       <div className="article-disclaimer shell"><strong>안전 안내</strong><p>이 글은 일반적인 정보입니다. 연기·불꽃·강한 탄 냄새가 있거나 물에 젖은 전기설비는 직접 만지지 말고 대피 후 119와 전문 기술자에게 연락하세요.</p></div>

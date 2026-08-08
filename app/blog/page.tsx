@@ -4,19 +4,19 @@ import { getPublishedPosts } from "@/lib/posts";
 import { siteConfig } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "전기안전 노트",
+  title: "블로그",
   description: "누전, 정전, 차단기, 분전반과 조명·배선 공사에 관한 램프맨의 전기안전 가이드입니다.",
   alternates: { canonical: "/blog" },
   openGraph: {
     type: "website",
-    title: "램프맨 전기안전 노트",
+    title: "램프맨 블로그",
     description: "누전, 정전, 차단기, 분전반과 조명·배선 공사에 관한 현장 중심 전기안전 가이드입니다.",
     url: "/blog",
     images: [{ url: "/og.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "램프맨 전기안전 노트",
+    title: "램프맨 블로그",
     description: "대전·청주 현장 중심 전기안전 가이드",
     images: ["/og.png"],
   },

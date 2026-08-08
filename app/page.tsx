@@ -233,7 +233,7 @@ export default async function Home() {
         <section className="journal-section section-pad">
           <div className="shell">
             <div className="section-heading heading-inline">
-              <div><h2>전기안전 <em>노트.</em></h2></div>
+              <div><h2>블로그</h2></div>
               <Link className="text-link" href="/blog">모든 글 보기 <span>↗</span></Link>
             </div>
             <div className="journal-grid">

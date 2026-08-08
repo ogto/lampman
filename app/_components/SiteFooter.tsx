@@ -21,7 +21,7 @@ export function SiteFooter() {
         </div>
         <div>
           <strong>안내</strong>
-          <Link href="/blog">전기안전 노트</Link>
+          <Link href="/blog">블로그</Link>
           <Link href="/#process">출동 절차</Link>
           <a href={siteConfig.phoneHref}>24시간 긴급전화</a>
           <Link href="/admin" rel="nofollow">
